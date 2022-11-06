@@ -3,7 +3,7 @@ In the third and final programming project you will create a combined IoT system
 
 ## Overview of the lab
 
- ![diagram of the project](/overview.png)
+ ![diagram of the project](/assets/images/overview.png)
 
 The components in the basic skeleton are: One program running a CoAP server. One program acting as the gateway which is running a CoAP client and an MQTT client. One program running the MQTT broker. And finally, one program running an MQTT client and some form of front-end for your system.
 
