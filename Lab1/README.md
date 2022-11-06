@@ -17,7 +17,7 @@ The program should be able to send GET messages to retrieve data from sensors/ac
 ## DELETE
 The program should be able to send DELETE messages to remove data from sensors/actuators with a short path names.
 
-#Testing Tools
+# Testing Tools
 
 Easiest is to test against CoAP.me on port 5683
 
