@@ -33,16 +33,18 @@ string get() {
 	// Declaring parameters
 	string message = "";
     unsigned char settings = 0b01010000;
-    unsigned char keyword = 0b00000001;
-    unsigned char msgId[] = {0b10101010, 0b01010101};
+    unsigned char method = 0b00000001;
+	// TODO : randomize message id
+    unsigned char msgId[] = {0b10111010, 0b01010101};
 	unsigned char uriOption = 0b00110111;
 	unsigned char uri[] = {0b01100011,0b01101111,0b01100001,0b01110000,0b00101110,0b01101101,0b01100101};
 	unsigned char pathOption = 0b10000100;
-	unsigned char path[] = {0b01110100, 0b01100101, 0b01110011, 0b01110100};
+	// test unsigned char path[] = {0b01110100, 0b01100101, 0b01110011, 0b01110100};
+	unsigned char path[] = {0b01110011,0b01101001,0b01101110,0b01101011,0b00001010};
 
 	// Forming a message based on the parameters
 	message.push_back(settings);
-	message.push_back(keyword);
+	message.push_back(method);
 	message.push_back(msgId[0]);
 	message.push_back(msgId[1]);
 	message.push_back(uriOption);
@@ -53,9 +55,46 @@ string get() {
 	for (int i = 0; i < 4; i++){
 		message.push_back(path[i]);
 	}
+	return message;
 }
 
-	
+
+string post() {
+	// Declaring parameters
+	string message = "";
+    unsigned char settings = 0b01010000;
+    unsigned char method = 0b00000010;
+	// TODO : randomize message id
+    unsigned char msgId[] = {0b10111110, 0b01010101};
+	unsigned char uriOption = 0b00110111;
+	unsigned char uri[] = {0b01100011,0b01101111,0b01100001,0b01110000,0b00101110,0b01101101,0b01100101};
+	unsigned char pathOption = 0b10000100;
+	unsigned char path[] = {0b01110011,0b01101001,0b01101110,0b01101011,0b00001010};
+	unsigned char payloadOption = 0b00010000;
+	unsigned char separator = 0b11111111;
+	unsigned char payload = 0b00000001;
+
+	// Forming a message based on the parameters
+	message.push_back(settings);
+	message.push_back(method);
+	message.push_back(msgId[0]);
+	message.push_back(msgId[1]);
+	message.push_back(uriOption);
+	for (int i = 0; i < 7; i++){
+		message.push_back(uri[i]);
+	}
+	message.push_back(pathOption);
+	for (int i = 0; i < 4; i++){
+		message.push_back(path[i]);
+	}
+	message.push_back(payloadOption);
+	message.push_back(separator);
+	message.push_back(payload);
+
+	return message;
+}
+
+
 // Driver code
 int main() {
 	int sockfd;
@@ -76,7 +115,9 @@ int main() {
 	servaddr.sin_port = htons(PORT);
 	servaddr.sin_addr.s_addr =  inet_addr("134.102.218.18");
 	
-	string message = get();
+	string message = post();
+
+
 	
 	// Sending the message to the test server
 	sendto(sockfd, message.c_str(), message.length(), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
@@ -87,9 +128,21 @@ int main() {
             &len);
     buffer[n] = '\0';
 
-    cout << getHeaders(buffer) << endl;
+    //cout << getHeaders(buffer) << endl;
 	cout << getContent(buffer) << endl;
+
+	message = get();
+	// Sending the message to the test server
+	sendto(sockfd, message.c_str(), message.length(), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
+        //printf("Hello message sent.\n");
 	
+    n = recvfrom(sockfd, (char *)buffer, MAXLINE,
+            MSG_WAITALL, (struct sockaddr *) &servaddr,
+            &len);
+    buffer[n] = '\0';
+	
+	cout << getContent(buffer) << endl;
+
 	close(sockfd);
 	return 0;
 }
