@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <iostream>
+#include <bitset>
 
 using namespace std;
 	
@@ -64,14 +65,26 @@ string get() {
 string post() {
 	// Declaring parameters
 	string message = "";
+	string input, path;
+	//char input[] = {0};
+	//char path[] = {0};
+	cout << "Enter the value you want to send : ";
+	cin >> input;
+	cout << "Enter the path : ";
+	cin >> path;
+	int size = path.length();
+	
+	bitset<4> b(size);
+	cout << b.to_string() << endl;
     unsigned char settings = 0b01010000;
     unsigned char method = 0b00000010;
 	// TODO : randomize message id
     unsigned char msgId[] = {0b10111110, 0b01010101};
 	unsigned char uriOption = 0b00110111;
 	unsigned char uri[] = {0b01100011,0b01101111,0b01100001,0b01110000,0b00101110,0b01101101,0b01100101};
-	unsigned char pathOption = 0b10000100;
-	unsigned char path[] = {0b01110011,0b01101001,0b01101110,0b01101011,0b00001010};
+	unsigned char pathOption = 0b1000;
+	
+	//unsigned char path[] = {0b01110011,0b01101001,0b01101110,0b01101011,0b00001010};
 	unsigned char payloadOption = 0b00010000;
 	unsigned char separator = 0b11111111;
 	unsigned char payload[] = {0b00110100,0b00110010};
@@ -86,14 +99,16 @@ string post() {
 		message.push_back(uri[i]);
 	}
 	message.push_back(pathOption);
-	for (int i = 0; i < 4; i++){
+	message += b.to_string().c_str();
+	/* for (int i = 0; i < 4; i++){
 		message.push_back(path[i]);
-	}
+	} */
+	message += path;
 	message.push_back(payloadOption);
 	message.push_back(separator);
-	message.push_back(payload[0]);
-	message.push_back(payload[1]);
-
+	message += input;
+	//message.push_back(payload[1]);
+	cout << message << endl; ; 
 	return message;
 }
 
@@ -135,7 +150,7 @@ void sendRequest(int sockfd, sockaddr_in servaddr, string message, char* buffer)
     n = recvfrom(sockfd, (char *)buffer, MAXLINE,
             MSG_WAITALL, (struct sockaddr *) &servaddr,
             &len);
-    buffer[n] = '\0';
+    //buffer[n] = '\0';
 
     //cout << getHeaders(buffer) << endl;
 	cout << getContent(buffer) << endl;
