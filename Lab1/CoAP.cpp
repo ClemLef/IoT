@@ -210,30 +210,39 @@ string put(string input, string path){
 	return message;
 }
 
+// Function used to send requests to send a request to a coap server
 void sendRequest(int sockfd, sockaddr_in servaddr, string message, char* buffer){
+	// Size of the response
 	unsigned int n = 0;
+	// Size of the server address
 	unsigned int len = 0;
+
 	// Sending the message to the test server
 	sendto(sockfd, message.c_str(), message.length(), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
 	
+	// Get the response from the server
     n = recvfrom(sockfd, (char *)buffer, MAXLINE + 1,
             MSG_WAITALL, (struct sockaddr *) &servaddr,
             &len);
+	// Closing the answer at the end
     buffer[n] = '\0';
 
+	// Printing the headers and contents
     //cout << getHeaders(buffer) << endl;
 	cout << getContent(buffer) << endl;
 }
 
-
-
-// Driver code
+// Main function of the program
 int main() {
+	// Socket file descriptor
 	int sockfd;
+	// Buffer to store the response
 	char buffer[MAXLINE];
+	// Address of the server
 	struct sockaddr_in servaddr;
-	unsigned int n, len;
+	// message to send the request, input of the user, path the user wants to access
 	string message, input, path;
+	// Variable determining the choice of the user
 	int choice = -1;
 
 	// Create a socket file descriptor
@@ -242,6 +251,7 @@ int main() {
 		exit(EXIT_FAILURE);
 	}
 	
+	// Reserve memory to store the server address
 	memset(&servaddr, 0, sizeof(servaddr));
 		
 	// CoAP server network info (134.102.218.18 is coap.me IP)
@@ -249,6 +259,7 @@ int main() {
 	servaddr.sin_port = htons(PORT);
 	servaddr.sin_addr.s_addr =  inet_addr("134.102.218.18");
 	
+	// Loop asking the user an action to realise
 	while(choice != 0){
 		cout << endl;
 		cout << "*------- Menu -------*" << endl;
@@ -260,48 +271,59 @@ int main() {
 		cout << "*--------------------*" << endl;
 		cout << "Make your choice : ";
 		cin >> choice;
+		// Clearing the console after a choice is made
 		system("clear");
 		switch (choice)
 		{
 		case 0:
+			// Quit the app
 			break;
 		case 1:
+			// Ask for a path and send get request
 			cout << "Enter the path to display : ";
 			cin >> path;
 			message = get(path);
 			sendRequest(sockfd, servaddr, message, buffer);
 			break;
 		case 2:
+			// Ask for a value and a path and sends a request
 			cout << "Enter the value you want to send : ";
 			cin >> input;
 			cout << "Enter the path : ";
 			cin >> path;
 			message = post(input, path);
+			// Print the status of the command
 			cout << "Status : ";
 			sendRequest(sockfd, servaddr, message, buffer);
+			// Display the contents of the path using a get
 			message = get(path);
 			cout << "Contents : ";
 			sendRequest(sockfd, servaddr, message, buffer);
 			break;
 		case 3:
+			// Ask for a value and a path and sends a request
 			cout << "Enter the value you want to send : ";
 			cin >> input;
 			cout << "Enter the path : ";
 			cin >> path;
 			message = put(input, path);
+			// Print the status of the command
 			cout << "Status : ";
 			sendRequest(sockfd, servaddr, message, buffer);
+			// Display the contents of the path using a get
 			message = get(path);
 			cout << "Contents : ";
 			sendRequest(sockfd, servaddr, message, buffer);
 			break;
 		case 4:
+			// Ask for a path and send delete request
 			cout << "Enter the path to delete : ";
 			cin >> path;
 			message = del(path);
 			sendRequest(sockfd, servaddr, message, buffer);
 			break;
 		default:
+			// a random value was choosen
 			cout << "Choose a number between 0 and 5" << endl;
 			break;
 		}
