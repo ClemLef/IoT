@@ -1,4 +1,10 @@
-// Client side implementation of UDP client-server model
+
+/* 
+   Clement LEFEBVRE / Implementing IoT protocols
+   Code created for lab 1 : CoAP client 
+   Simple code to send GET/POST/PUT/DELETE messages to a CoAP server
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
