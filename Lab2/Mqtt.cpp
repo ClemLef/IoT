@@ -17,14 +17,15 @@ using namespace std;
 
 string connectAck() {
 	string message = "";
-	unsigned char params = 0b00100000;
-	unsigned char remainingBytes = 0b00000010;
-	unsigned char session = 0b00000000;
-	unsigned char result = 0b00000000;
+	unsigned char params = 0x20;
+	unsigned char remainingBytes = 0x02;
+	unsigned char session = 0x00;
+	unsigned char result = 0x00;
 	message.push_back(params);
 	message.push_back(remainingBytes);
 	message.push_back(session);
 	message.push_back(result);
+	cout << hex << message << endl;
 	return message;
 }
 
@@ -84,12 +85,12 @@ int main(int argc, char const* argv[])
 		}*/
 		
 		string response = connectAck();
-		cout << response << endl;
+		
 
 		send(new_socket, response.c_str(), response.length(), 0);
         
         // closing the connected socket
-        close(new_socket);
+        //close(new_socket);
         
     }
 	return 0;
