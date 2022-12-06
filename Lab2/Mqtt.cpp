@@ -29,6 +29,29 @@ string connectAck() {
 	return message;
 }
 
+string pingAck() {
+	string message = "";
+	unsigned char params = 0xd0;
+	unsigned char remainingBytes = 0x02;
+	unsigned char session = 0x00;
+	unsigned char result = 0x00;
+	message.push_back(params);
+	message.push_back(remainingBytes);
+	message.push_back(session);
+	message.push_back(result);
+	cout << hex << message << endl;
+	return message;
+}
+
+
+void getControlPacketType(char* buffer, unsigned char* controlPacketType){
+	controlPacketType[0] = buffer[0];
+	 /* for(int i = 0; i < 1; i++){
+			cout << hex << (int)controlPacketType[i];
+		}
+		cout << endl; */
+} 
+
 int main(int argc, char const* argv[])
 {
 	int server_fd, new_socket, valread;
@@ -36,9 +59,8 @@ int main(int argc, char const* argv[])
 	int opt = 1;
 	int addrlen = sizeof(address);
 	char buffer[1024] = { 0 };
-	//char* hello = "Hello from server";
-   	list<string> sensors;
-    string sensorValue = "sensor value = 42";
+	unsigned char controlPacketType[1] = {0};
+	string response;
 
 	// Creating socket file descriptor
 	if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -68,30 +90,39 @@ int main(int argc, char const* argv[])
 		perror("listen");
 		exit(EXIT_FAILURE);
 	}
-	
+
+	if ((new_socket
+			= accept(server_fd, (struct sockaddr*)&address,
+					(socklen_t*)&addrlen))
+			< 0) {
+			perror("accept");
+			exit(EXIT_FAILURE);
+	} 
+
     while (1){
-
-		if ((new_socket
-				= accept(server_fd, (struct sockaddr*)&address,
-						(socklen_t*)&addrlen))
-				< 0) {
-				perror("accept");
-				exit(EXIT_FAILURE);
-		}
-
         valread = read(new_socket, buffer, 1024);
-		/*for(int i = 0; i < 1024; i++){
-			cout << std::hex << (int)buffer[i];
-		}*/
+		getControlPacketType(buffer, controlPacketType);
+		cout << hex << (int)controlPacketType[0] << endl;
 		
-		string response = connectAck();
-		
-
-		send(new_socket, response.c_str(), response.length(), 0);
-        
-        // closing the connected socket
-        //close(new_socket);
-        
+		switch (controlPacketType[0])
+		{
+		//connect
+		case 0x10:
+			response = connectAck();
+			send(new_socket, response.c_str(), response.length(), 0);
+			break;
+		//ping
+		case 0xc0:
+			response = pingAck();
+			send(new_socket, response.c_str(), response.length(), 0);
+			break;
+		//disconnect
+		case 0xe0:
+			close(new_socket);
+			break;
+		default:
+			break;
+		}	
     }
 	return 0;
 }
