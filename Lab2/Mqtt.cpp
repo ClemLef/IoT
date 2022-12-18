@@ -25,7 +25,6 @@ string connectAck() {
 	message.push_back(remainingBytes);
 	message.push_back(session);
 	message.push_back(result);
-	cout << hex << message << endl;
 	return message;
 }
 
@@ -39,17 +38,29 @@ string pingAck() {
 	message.push_back(remainingBytes);
 	message.push_back(session);
 	message.push_back(result);
-	cout << hex << message << endl;
+	return message;
+}
+
+string subscribeAck(unsigned char packetID[]) {
+	string message = "";
+	unsigned char params = 0x90;
+	unsigned char remainingBytes = 0x03;
+	unsigned char returnCode = 0x00;
+	message.push_back(params);
+	message.push_back(remainingBytes);
+	message.push_back(packetID[0]);
+	message.push_back(packetID[1]);
+	message.push_back(returnCode);
 	return message;
 }
 
 
-void getControlPacketType(char* buffer, unsigned char* controlPacketType){
-	controlPacketType[0] = buffer[0];
-	 /* for(int i = 0; i < 1; i++){
-			cout << hex << (int)controlPacketType[i];
-		}
-		cout << endl; */
+void getControlPacketType(char* buffer, unsigned char* controlPacketType, int msgLen){
+	for(int i = 0; i < msgLen; i++){
+		controlPacketType[i] = buffer[i];
+		cout << hex << (int)controlPacketType[i];
+	}
+	cout << endl;
 } 
 
 int main(int argc, char const* argv[])
@@ -59,8 +70,9 @@ int main(int argc, char const* argv[])
 	int opt = 1;
 	int addrlen = sizeof(address);
 	char buffer[1024] = { 0 };
-	unsigned char controlPacketType[1] = {0};
+	unsigned char controlPacketType[100] = {0};
 	string response;
+	unsigned char packetID[2] = {0};
 
 	// Creating socket file descriptor
 	if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -97,11 +109,14 @@ int main(int argc, char const* argv[])
 			< 0) {
 			perror("accept");
 			exit(EXIT_FAILURE);
-	} 
+		} 
 
     while (1){
+		
+
         valread = read(new_socket, buffer, 1024);
-		getControlPacketType(buffer, controlPacketType);
+		cout << valread << endl;
+		getControlPacketType(buffer, controlPacketType, (int)buffer[1]);
 		cout << hex << (int)controlPacketType[0] << endl;
 		
 		switch (controlPacketType[0])
@@ -116,9 +131,20 @@ int main(int argc, char const* argv[])
 			response = pingAck();
 			send(new_socket, response.c_str(), response.length(), 0);
 			break;
+		//subscribe
+		case 0x82:
+			packetID[0] = controlPacketType[2];
+			packetID[1] = controlPacketType[3];
+			response = subscribeAck(packetID);
+			send(new_socket, response.c_str(), response.length(), 0);
+			valread = 0;
+			buffer[0] = '\0';
+			break;
 		//disconnect
 		case 0xe0:
 			close(new_socket);
+			valread = 0;
+			buffer[0] = '\0';
 			break;
 		default:
 			break;
