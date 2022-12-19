@@ -9,11 +9,15 @@
 #include <iostream>
 #include <string>
 #include <list>
+#include <pthread.h>
+
 
 using namespace std;
 
 #define PORT 1883
 
+pthread_t thread_tcp [100], thread_file [10];
+int threadno_tcp = 0;
 
 string connectAck() {
 	string message = "";
@@ -71,10 +75,32 @@ string unsubscribeAck(unsigned char packetID[]) {
 void getControlPacketType(char* buffer, unsigned char* controlPacketType, int msgLen){
 	for(int i = 0; i < msgLen; i++){
 		controlPacketType[i] = buffer[i];
-		cout << hex << (int)controlPacketType[i];
+		//cout << hex << (int)controlPacketType[i];
+	}
+	//cout << endl;
+} 
+
+void getTopic(char* buffer, unsigned char* topic, unsigned char* controlPacketType){
+	int topicLength = controlPacketType[3];
+	//print topic 
+	cout << "topic : ";
+	for(int i = 4; i < topicLength + 4; i++){
+		topic[i] = controlPacketType[i];
+		cout << topic[i];
 	}
 	cout << endl;
-} 
+}
+
+void getMessage(char* buffer, unsigned char* message, unsigned char* controlPacketType){
+	int topicLength = controlPacketType[3];
+	//print msg
+	cout << "message : ";
+	for(int i = topicLength + 4; i < 2 + buffer[1]; i++){
+		message[i] = controlPacketType[i];
+		cout << message[i];
+	}
+	cout << endl;
+}
 
 int main(int argc, char const* argv[])
 {
@@ -86,6 +112,9 @@ int main(int argc, char const* argv[])
 	unsigned char controlPacketType[100] = {0};
 	string response;
 	unsigned char packetID[2] = {0};
+
+	unsigned char topic[100] = {0};
+	unsigned char message[1024] = {0};
 
 	// Creating socket file descriptor
 	if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -125,7 +154,6 @@ int main(int argc, char const* argv[])
 		} 
 
     while (1){
-		
 
         valread = read(new_socket, buffer, 1024);
 		getControlPacketType(buffer, controlPacketType, 2 + buffer[1]);
@@ -156,6 +184,12 @@ int main(int argc, char const* argv[])
 			packetID[1] = controlPacketType[3];
 			response = unsubscribeAck(packetID);
 			send(new_socket, response.c_str(), response.length(), 0);
+			break;
+		//publish
+		case 0x30:
+			getTopic(buffer, topic, controlPacketType);
+			getMessage(buffer, message, controlPacketType);
+			//Todo : add the message to the topic list and send it to the other clients
 			break;
 		//disconnect
 		case 0xe0:
