@@ -54,6 +54,19 @@ string subscribeAck(unsigned char packetID[]) {
 	return message;
 }
 
+string unsubscribeAck(unsigned char packetID[]) {
+	string message = "";
+	unsigned char params = 0xb0;
+	unsigned char remainingBytes = 0x03;
+	unsigned char returnCode = 0x00;
+	message.push_back(params);
+	message.push_back(remainingBytes);
+	message.push_back(packetID[0]);
+	message.push_back(packetID[1]);
+	message.push_back(returnCode);
+	return message;
+}
+
 
 void getControlPacketType(char* buffer, unsigned char* controlPacketType, int msgLen){
 	for(int i = 0; i < msgLen; i++){
@@ -115,8 +128,7 @@ int main(int argc, char const* argv[])
 		
 
         valread = read(new_socket, buffer, 1024);
-		cout << valread << endl;
-		getControlPacketType(buffer, controlPacketType, (int)buffer[1]);
+		getControlPacketType(buffer, controlPacketType, 2 + buffer[1]);
 		cout << hex << (int)controlPacketType[0] << endl;
 		
 		switch (controlPacketType[0])
@@ -137,8 +149,13 @@ int main(int argc, char const* argv[])
 			packetID[1] = controlPacketType[3];
 			response = subscribeAck(packetID);
 			send(new_socket, response.c_str(), response.length(), 0);
-			valread = 0;
-			buffer[0] = '\0';
+			break;
+		//unsubscribe
+		case 0xa2:
+			packetID[0] = controlPacketType[2];
+			packetID[1] = controlPacketType[3];
+			response = unsubscribeAck(packetID);
+			send(new_socket, response.c_str(), response.length(), 0);
 			break;
 		//disconnect
 		case 0xe0:
