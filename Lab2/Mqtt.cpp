@@ -11,7 +11,6 @@
 #include <list>
 #include <pthread.h>
 
-
 using namespace std;
 
 #define PORT 1883
@@ -22,8 +21,6 @@ typedef struct
 	struct sockaddr address;
 	socklen_t addr_len;
 } connection_t;
-
-
 
 string connectAck() {
 	string message = "";
@@ -73,15 +70,6 @@ string unsubscribeAck(unsigned char packetID[]) {
 	return message;
 }
 
-
-void getControlPacketType(char* buffer, unsigned char* controlPacketType, int msgLen){
-	for(int i = 0; i < msgLen; i++){
-		controlPacketType[i] = buffer[i];
-		//cout << hex << (int)controlPacketType[i];
-	}
-	//cout << endl;
-} 
-
 void getTopic(char* buffer, unsigned char* topic){
 	int topicLength = buffer[3];
 	//print topic 
@@ -120,25 +108,22 @@ void * process(void * ptr)
     conn = (connection_t *)ptr;
 
 	cout << hex << (int)buffer[0] << endl;
-	while (buffer[0] != 0xe0){
-		//addr = (long)((struct sockaddr_in *)&conn->address)->sin_addr.s_addr;
-		//buffer = (char *)malloc((len+1)*sizeof(char));
-		//buffer[len] = 0;
+	while (buffer[0] != 0xffffffe0){
+		cout << hex << (int)buffer[0] << endl;
+		addr = (long)((struct sockaddr_in *)&conn->address)->sin_addr.s_addr;
+		
 		/* read message */
 		read(conn->sock, buffer, 1024);
-		/* print message */
 		/*printf("%d.%d.%d.%d:\n",
 			(addr      ) & 0xff,
 			(addr >>  8) & 0xff,
 			(addr >> 16) & 0xff,
 			(addr >> 24) & 0xff,
 			);*/
-		//cout << len << endl;
-		for(int i = 0; i < 200; i++){
+		/*for(int i = 0; i < 200; i++){
 			cout << hex << (int)buffer[i];
 		}
-		cout << endl;
-		cout << hex << (int)buffer[0] << endl;
+		cout << endl;*/
 		controlPacketType = buffer[0];
 		switch (controlPacketType)
 		{
@@ -181,7 +166,6 @@ void * process(void * ptr)
 		}
 	}
 	/* close socket and clean up */
-	free(buffer);
     close(conn->sock);
     free(conn);
     pthread_exit(0);
