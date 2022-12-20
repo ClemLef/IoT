@@ -35,13 +35,9 @@ string connectAck() {
 string pingAck() {
 	string message = "";
 	unsigned char params = 0xd0;
-	unsigned char remainingBytes = 0x02;
-	unsigned char session = 0x00;
-	unsigned char result = 0x00;
+	unsigned char remainingBytes = 0x00;
 	message.push_back(params);
 	message.push_back(remainingBytes);
-	message.push_back(session);
-	message.push_back(result);
 	return message;
 }
 
