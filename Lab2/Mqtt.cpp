@@ -1,5 +1,6 @@
 // Server side C/C++ program to demonstrate Socket
 // programming
+#include <list>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,8 +9,10 @@
 #include <string.h>
 #include <iostream>
 #include <string>
-#include <list>
 #include <pthread.h>
+#include <vector>
+#include <map>
+
 
 using namespace std;
 
@@ -21,6 +24,8 @@ typedef struct
 	struct sockaddr address;
 	socklen_t addr_len;
 } connection_t;
+
+map<string, list<int>> topicSockets;
 
 string connectAck() {
 	string message = "";
@@ -70,26 +75,92 @@ string unsubscribeAck(unsigned char packetID[]) {
 	return message;
 }
 
-void getTopic(char* buffer, unsigned char* topic){
-	int topicLength = buffer[3];
-	//print topic 
-	cout << "topic : ";
-	for(int i = 4; i < topicLength + 4; i++){
-		topic[i] = buffer[i];
-		cout << topic[i];
-	}
-	cout << endl;
+string publish(unsigned char packetID[], string topic, string payload) {
+	string message = "";
+	unsigned char params = 0x30;
+	unsigned char remainingBytes = sizeof(topic) + sizeof(payload);
+	unsigned char topicLength[2];
+	topicLength[0] = sizeof(topic) / 256;
+	topicLength[1] = sizeof(topic) % 256;
+	cout << "rb " << (int)remainingBytes << endl;
+	message.push_back(params);
+	message.push_back(remainingBytes);
+	message.push_back(topicLength[0]);
+	message.push_back(topicLength[1]);
+	message += topic;
+	message.push_back(packetID[0]);
+	message.push_back(packetID[1]);
+	message += payload;
+	return message;
 }
 
-void getMessage(char* buffer, unsigned char* message){
+
+string getTopic(char* buffer, int topicLength, string pubSub){
+	//print topic 
+	string topic;
+	int position;
+	if(pubSub == "publish"){
+		position = 4;
+	} else {
+		position = 6;
+	}
+	//cout << topicLength << endl;
+	for(int i = position; i < position + topicLength; i++){
+		topic += buffer[i];
+	}
+	//cout << "topic : " << topic << endl;
+	return topic;
+}
+
+string getMessage(char* buffer){
+	string message;
 	int topicLength = buffer[3];
 	//print msg
-	cout << "message : ";
+	//cout << "message : ";
 	for(int i = topicLength + 4; i < 2 + buffer[1]; i++){
-		message[i] = buffer[i];
-		cout << message[i];
+		message += buffer[i];
+		//cout << message[i];
 	}
-	cout << endl;
+	//cout << endl;
+	return message;
+}
+
+void addToMap(string topic, int sock){
+	list<int> sockList;
+	// If topic is not in the map : 
+	if(topicSockets.find(topic) != topicSockets.end()){
+		sockList = topicSockets.find(topic)->second;
+		sockList.push_back(sock);
+		cout << "socklist" << endl;
+		for (auto const &i: sockList) {
+			std::cout << i << std::endl;
+		}
+		topicSockets.find(topic)->second = sockList;
+	} else {
+		sockList.push_back(sock);
+		cout << "socklist2" << endl;
+		for (auto const &i: sockList) {
+			std::cout << i << std::endl;
+		}
+		topicSockets.insert({topic, sockList});
+	}
+}
+
+void sendPublish(string message, string topic, unsigned char* packetID, list<int> sockList, int socket){
+	//Todo : add the message to the topic list and send it to the other clients
+	string response;
+	if(topicSockets.find(topic) != topicSockets.end()){
+		sockList = topicSockets.find(topic)->second;
+		response = publish(packetID, topic, message);
+		cout << "sending to " << endl;
+		for (auto const &i: sockList) {
+			std::cout << i<< std::endl;
+			if(i != socket){
+				send(i, response.c_str(), response.length(), 0);
+			}
+		}
+	}
+
 }
 
 void * process(void * ptr)
@@ -98,18 +169,20 @@ void * process(void * ptr)
     connection_t * conn;
     long addr = 0;
 	string response;
+	int topicLength;
 	unsigned char controlPacketType;
 	unsigned char packetID[2] = {0};
+	list<int> sockList = {0};
 
-	unsigned char topic[100] = {0};
-	unsigned char message[1024] = {0};
+	string topic;
+	string message;
 
 	if (!ptr) pthread_exit(0);
     conn = (connection_t *)ptr;
 
-	cout << hex << (int)buffer[0] << endl;
+	//cout << hex << (int)buffer[0] << endl;
 	while (buffer[0] != 0xffffffe0){
-		cout << hex << (int)buffer[0] << endl;
+		//cout << hex << (int)buffer[0] << endl;
 		addr = (long)((struct sockaddr_in *)&conn->address)->sin_addr.s_addr;
 		
 		/* read message */
@@ -139,8 +212,13 @@ void * process(void * ptr)
 			break;
 		//subscribe
 		case 0x82:
+		//améliorer la gestion de l'id
 			packetID[0] = buffer[2];
 			packetID[1] = buffer[3];
+			//todo use the two bytes for the topic length
+			topicLength = (int)buffer[5] + (int)buffer[4];
+			topic = getTopic(buffer, topicLength, "subscribe");
+			addToMap(topic, conn->sock);
 			response = subscribeAck(packetID);
 			send(conn->sock, response.c_str(), response.length(), 0);
 			break;
@@ -153,9 +231,12 @@ void * process(void * ptr)
 			break;
 		//publish
 		case 0x30:
-			getTopic(buffer, topic);
-			getMessage(buffer, message);
-			//Todo : add the message to the topic list and send it to the other clients
+			packetID[0] = buffer[2];
+			packetID[1] = buffer[3];
+			topicLength = (int)buffer[3] + (int)buffer[2];
+			topic = getTopic(buffer, topicLength, "publish");
+			message = getMessage(buffer);
+			sendPublish(message, topic, packetID, sockList, conn->sock);
 			break;
 		//disconnect
 		case 0xe0:
@@ -177,6 +258,8 @@ int main(int argc, char const* argv[])
     struct sockaddr_in address;
     connection_t * connection;
     pthread_t thread;
+
+	map<string, vector<connection_t>> topicSockets;
 
 	/* create socket */
     sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -222,52 +305,6 @@ int main(int argc, char const* argv[])
         }
 
 
-
-        /*valread = read(new_socket, buffer, 1024);
-		getControlPacketType(buffer, controlPacketType, 2 + buffer[1]);
-		cout << hex << (int)controlPacketType[0] << endl;
-		
-		switch (controlPacketType[0])
-		{
-		//connect
-		case 0x10:
-			response = connectAck();
-			send(new_socket, response.c_str(), response.length(), 0);
-			break;
-		//ping
-		case 0xc0:
-			response = pingAck();
-			send(new_socket, response.c_str(), response.length(), 0);
-			break;
-		//subscribe
-		case 0x82:
-			packetID[0] = controlPacketType[2];
-			packetID[1] = controlPacketType[3];
-			response = subscribeAck(packetID);
-			send(new_socket, response.c_str(), response.length(), 0);
-			break;
-		//unsubscribe
-		case 0xa2:
-			packetID[0] = controlPacketType[2];
-			packetID[1] = controlPacketType[3];
-			response = unsubscribeAck(packetID);
-			send(new_socket, response.c_str(), response.length(), 0);
-			break;
-		//publish
-		case 0x30:
-			getTopic(buffer, topic, controlPacketType);
-			getMessage(buffer, message, controlPacketType);
-			//Todo : add the message to the topic list and send it to the other clients
-			break;
-		//disconnect
-		case 0xe0:
-			close(new_socket);
-			valread = 0;
-			buffer[0] = '\0';
-			break;
-		default:
-			break;
-		}	*/
     }
 	return 0;
 }
