@@ -94,8 +94,6 @@ string publish(unsigned char packetID[], string topic, string payload) {
 	message.push_back(topicLength[0]);
 	message.push_back(topicLength[1]);
 	message += topic;
-	//message.push_back(packetID[0]);
-	//message.push_back(packetID[1]);
 	message += payload;
 	return message;
 }
