@@ -78,18 +78,24 @@ string unsubscribeAck(unsigned char packetID[]) {
 string publish(unsigned char packetID[], string topic, string payload) {
 	string message = "";
 	unsigned char params = 0x30;
-	unsigned char remainingBytes = sizeof(topic) + sizeof(payload);
+	unsigned char remainingBytes;
 	unsigned char topicLength[2];
-	topicLength[0] = sizeof(topic) / 256;
-	topicLength[1] = sizeof(topic) % 256;
-	cout << "rb " << (int)remainingBytes << endl;
+
+	int topicSize = topic.size();
+	topicLength[0] = topicSize / 256;
+	topicLength[1] = topicSize % 256;
+
+	int payloadSize = payload.size();
+
+	remainingBytes = topicSize + payloadSize + 2;
+
 	message.push_back(params);
 	message.push_back(remainingBytes);
 	message.push_back(topicLength[0]);
 	message.push_back(topicLength[1]);
 	message += topic;
-	message.push_back(packetID[0]);
-	message.push_back(packetID[1]);
+	//message.push_back(packetID[0]);
+	//message.push_back(packetID[1]);
 	message += payload;
 	return message;
 }
@@ -131,17 +137,17 @@ void addToMap(string topic, int sock){
 	if(topicSockets.find(topic) != topicSockets.end()){
 		sockList = topicSockets.find(topic)->second;
 		sockList.push_back(sock);
-		cout << "socklist" << endl;
+		/* cout << "socklist" << endl;
 		for (auto const &i: sockList) {
 			std::cout << i << std::endl;
-		}
+		} */
 		topicSockets.find(topic)->second = sockList;
 	} else {
 		sockList.push_back(sock);
-		cout << "socklist2" << endl;
+		/* cout << "socklist2" << endl;
 		for (auto const &i: sockList) {
 			std::cout << i << std::endl;
-		}
+		} */
 		topicSockets.insert({topic, sockList});
 	}
 }
@@ -152,9 +158,8 @@ void sendPublish(string message, string topic, unsigned char* packetID, list<int
 	if(topicSockets.find(topic) != topicSockets.end()){
 		sockList = topicSockets.find(topic)->second;
 		response = publish(packetID, topic, message);
-		cout << "sending to " << endl;
+		cout << "sending ..." << endl;
 		for (auto const &i: sockList) {
-			std::cout << i<< std::endl;
 			if(i != socket){
 				send(i, response.c_str(), response.length(), 0);
 			}
