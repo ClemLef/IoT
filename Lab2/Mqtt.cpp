@@ -26,7 +26,7 @@ typedef struct
 
 // global variables
 map<string, list<int>> topicSockets;
-string lastMessage;
+map<string, string> topicRetain;
 
 // creates the connect acknowledgment message
 string connectAck() {
@@ -134,19 +134,25 @@ string getMessage(char* buffer){
 	for(int i = topicLength + 4; i < 2 + buffer[1]; i++){
 		message += buffer[i];
 	}
-
 	return message;
 }
 
 void removeFromMap(string topic, int sock){
 	// internal socket list used to remove a socket from the list 
 	list<int> sockList;
-	// If topic is not in the map : 
-	if(topicSockets.find(topic) == topicSockets.end()){
+	// If topic is in the map : 
+	if(topicSockets.find(topic) != topicSockets.end()){
 		// gets the list of sockets from the map
 		sockList = topicSockets.find(topic)->second;
 		// removes the disconnected socket
+		for (auto const &i: sockList){
+			cout << i << "|";
+		}
+		cout << endl;
 		sockList.remove(sock);
+		for (auto const &i: sockList){
+			cout << i << "|";
+		}
 		// puts back the socketlist without the disconnected client
 		topicSockets.find(topic)->second = sockList;
 	}
@@ -188,7 +194,6 @@ void sendPublish(string message, string topic, unsigned char* packetID, list<int
 			}
 		}
 	}
-
 }
 
 // functin used by each new thread
@@ -250,6 +255,7 @@ void * process(void * ptr)
 // améliorer la gestion de l'id -----------------------------------------------------------
 			packetID[0] = buffer[2];
 			packetID[1] = buffer[3];
+			message = "";
 			// topicLength is spread on two bytes in the buffer, so we combine them and convert to int
 			topicLength = (int)buffer[5] + (int)buffer[4];
 			topic = getTopic(buffer, topicLength, "subscribe");
@@ -257,14 +263,13 @@ void * process(void * ptr)
 			response = subscribeAck(packetID);
 			send(conn->sock, response.c_str(), response.length(), 0);
 			// send last retain to new subscriber
-			/* cout << topic << endl;
-			pubRetainMessage = publish(packetID, topic, lastMessage);
+			cout << topic << endl;
+			/*pubRetainMessage = publish(packetID, topic, lastMessage);
 			send(conn->sock, pubRetainMessage.c_str(), pubRetainMessage.length(), 0);*/
 			if(topicSockets.find(topic) != topicSockets.end()){
-				// gets all the sockets subscribed to the topic
-				sockList = topicSockets.find(topic)->second;
+				// gets the last retained message of the topic
+				message = topicRetain.find(topic)->second; //problem here the retain msg is also put in other topics
 				// creates the packet to send 
-				message = getMessage(buffer); // do something to get the message
 				pubRetainMessage = publish(packetID, topic, message);
 				cout << "sending last message ..." << endl;
 				send(conn->sock, pubRetainMessage.c_str(), pubRetainMessage.length(), 0);
@@ -276,6 +281,7 @@ void * process(void * ptr)
 			packetID[1] = buffer[3];
 			topicLength = (int)buffer[4] + (int)buffer[5];
 			topic = getTopic(buffer, topicLength, "unsubscribe");
+
 			removeFromMap(topic, conn->sock);
 			response = unsubscribeAck(packetID);
 			send(conn->sock, response.c_str(), response.length(), 0);
@@ -298,7 +304,7 @@ void * process(void * ptr)
 			message = getMessage(buffer);
 			// if the retain option is set, set this message as the one to be sent 
 			if (retain) {
-				lastMessage = message;
+				topicRetain.find(topic)->second = message;
 			}
 			sendPublish(message, topic, packetID, sockList, conn->sock);
 			break;
