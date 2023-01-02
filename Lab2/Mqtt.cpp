@@ -13,7 +13,6 @@
 #include <vector>
 #include <map>
 
-
 using namespace std;
 
 #define PORT 1883
@@ -25,8 +24,11 @@ typedef struct
 	socklen_t addr_len;
 } connection_t;
 
+// global variables
 map<string, list<int>> topicSockets;
+string lastMessage;
 
+// creates the connect acknowledgment message
 string connectAck() {
 	string message = "";
 	unsigned char params = 0x20;
@@ -40,6 +42,7 @@ string connectAck() {
 	return message;
 }
 
+// creates the ping acknowledgment message
 string pingAck() {
 	string message = "";
 	unsigned char params = 0xd0;
@@ -49,6 +52,7 @@ string pingAck() {
 	return message;
 }
 
+// creates the subscribe acknowledgment message
 string subscribeAck(unsigned char packetID[]) {
 	string message = "";
 	unsigned char params = 0x90;
@@ -62,6 +66,7 @@ string subscribeAck(unsigned char packetID[]) {
 	return message;
 }
 
+// creates the unsubscribe acknowledgment message
 string unsubscribeAck(unsigned char packetID[]) {
 	string message = "";
 	unsigned char params = 0xb0;
@@ -75,18 +80,22 @@ string unsubscribeAck(unsigned char packetID[]) {
 	return message;
 }
 
+// creates the publish message
 string publish(unsigned char packetID[], string topic, string payload) {
 	string message = "";
 	unsigned char params = 0x30;
 	unsigned char remainingBytes;
 	unsigned char topicLength[2];
 
+	// gets the topic size as int and separate them as two bytes
 	int topicSize = topic.size();
 	topicLength[0] = topicSize / 256;
 	topicLength[1] = topicSize % 256;
 
+	// gets the size of the payload
 	int payloadSize = payload.size();
 
+	// calculates the overall size of the message
 	remainingBytes = topicSize + payloadSize + 2;
 
 	message.push_back(params);
@@ -98,65 +107,81 @@ string publish(unsigned char packetID[], string topic, string payload) {
 	return message;
 }
 
-
-string getTopic(char* buffer, int topicLength, string pubSub){
-	//print topic 
+// extracts the topic from the buffer
+string getTopic(char* buffer, int topicLength, string pubSub){ 
 	string topic;
 	int position;
+
+	// the topic is either starting at byte 4 for the publish message
 	if(pubSub == "publish"){
 		position = 4;
 	} else {
 		position = 6;
 	}
-	//cout << topicLength << endl;
+
 	for(int i = position; i < position + topicLength; i++){
 		topic += buffer[i];
 	}
-	//cout << "topic : " << topic << endl;
+
 	return topic;
 }
 
+// extracts the message from the buffer
 string getMessage(char* buffer){
 	string message;
 	int topicLength = buffer[3];
-	//print msg
-	//cout << "message : ";
+
 	for(int i = topicLength + 4; i < 2 + buffer[1]; i++){
 		message += buffer[i];
-		//cout << message[i];
 	}
-	//cout << endl;
+
 	return message;
 }
 
+void removeFromMap(string topic, int sock){
+	// internal socket list used to remove a socket from the list 
+	list<int> sockList;
+	// If topic is not in the map : 
+	if(topicSockets.find(topic) == topicSockets.end()){
+		// gets the list of sockets from the map
+		sockList = topicSockets.find(topic)->second;
+		// removes the disconnected socket
+		sockList.remove(sock);
+		// puts back the socketlist without the disconnected client
+		topicSockets.find(topic)->second = sockList;
+	}
+}
+
 void addToMap(string topic, int sock){
+	// internal socket list used to add a socket to the list 
 	list<int> sockList;
 	// If topic is not in the map : 
 	if(topicSockets.find(topic) != topicSockets.end()){
+		// gets the list of sockets from the map
 		sockList = topicSockets.find(topic)->second;
+		// adds the new connected socket
 		sockList.push_back(sock);
-		/* cout << "socklist" << endl;
-		for (auto const &i: sockList) {
-			std::cout << i << std::endl;
-		} */
+		// puts back the socketlist with the new connection
 		topicSockets.find(topic)->second = sockList;
 	} else {
+		// if topic exists in the map
+		// Something feels wong here --------------------------------------
 		sockList.push_back(sock);
-		/* cout << "socklist2" << endl;
-		for (auto const &i: sockList) {
-			std::cout << i << std::endl;
-		} */
 		topicSockets.insert({topic, sockList});
 	}
 }
 
 void sendPublish(string message, string topic, unsigned char* packetID, list<int> sockList, int socket){
-	//Todo : add the message to the topic list and send it to the other clients
 	string response;
+	
+	// If topic is not in the map
 	if(topicSockets.find(topic) != topicSockets.end()){
+		// gets all the sockets subscribed to the topic
 		sockList = topicSockets.find(topic)->second;
+		// creates the packet to send 
 		response = publish(packetID, topic, message);
 		cout << "sending ..." << endl;
+		// sending to all sockets in the subscribed list
 		for (auto const &i: sockList) {
 			if(i != socket){
 				send(i, response.c_str(), response.length(), 0);
@@ -166,82 +191,118 @@ void sendPublish(string message, string topic, unsigned char* packetID, list<int
 
 }
 
+// functin used by each new thread
 void * process(void * ptr)
 {
+	// buffer is the array receivd in the socket
     char buffer[1024] = {0};
+	// conn is a struct containing all info about the sockets 
     connection_t * conn;
+	// addr is the adress of the connected client(s)
     long addr = 0;
+	// response is a string used to create and send the correct response to a message 
 	string response;
+	// topicLength  is a variable used to get the length of the topic from the buffer
 	int topicLength;
+	// controlPacketType is a variable used to get the type of message received
 	unsigned char controlPacketType;
+	// packetID is the variable used to get the receiving packet ID and to put on the repsonse message
 	unsigned char packetID[2] = {0};
+	// list of all sockets subscribed to a topic
 	list<int> sockList = {0};
-
+	// boolean used to managd the retained messages
+	bool retain;
+	// string used to send the last retain message to clients connecting 
+	string pubRetainMessage;
+	// string used to extract the topic from the buffer
 	string topic;
+	// string used to extract the message from the buffer
 	string message;
 
+	// some threading init
 	if (!ptr) pthread_exit(0);
     conn = (connection_t *)ptr;
 
-	//cout << hex << (int)buffer[0] << endl;
+	// while message type is not disconnect
 	while (buffer[0] != 0xffffffe0){
-		//cout << hex << (int)buffer[0] << endl;
+		// get the address of the client
 		addr = (long)((struct sockaddr_in *)&conn->address)->sin_addr.s_addr;
 		
 		/* read message */
 		read(conn->sock, buffer, 1024);
-		/*printf("%d.%d.%d.%d:\n",
-			(addr      ) & 0xff,
-			(addr >>  8) & 0xff,
-			(addr >> 16) & 0xff,
-			(addr >> 24) & 0xff,
-			);*/
-		/*for(int i = 0; i < 200; i++){
-			cout << hex << (int)buffer[i];
-		}
-		cout << endl;*/
+		
 		controlPacketType = buffer[0];
+		// tratmnt of the different messages types
 		switch (controlPacketType)
 		{
-		//connect
+		// connect
 		case 0x10:
 			response = connectAck();
 			send(conn->sock, response.c_str(), response.length(), 0);
 			break;
-		//ping
+		// ping
 		case 0xc0:
 			response = pingAck();
 			send(conn->sock, response.c_str(), response.length(), 0);
 			break;
-		//subscribe
+		// subscribe
 		case 0x82:
-		//améliorer la gestion de l'id
+// améliorer la gestion de l'id -----------------------------------------------------------
 			packetID[0] = buffer[2];
 			packetID[1] = buffer[3];
-			//todo use the two bytes for the topic length
+			// topicLength is spread on two bytes in the buffer, so we combine them and convert to int
 			topicLength = (int)buffer[5] + (int)buffer[4];
 			topic = getTopic(buffer, topicLength, "subscribe");
 			addToMap(topic, conn->sock);
 			response = subscribeAck(packetID);
 			send(conn->sock, response.c_str(), response.length(), 0);
+			// send last retain to new subscriber
+			/* cout << topic << endl;
+			pubRetainMessage = publish(packetID, topic, lastMessage);
+			send(conn->sock, pubRetainMessage.c_str(), pubRetainMessage.length(), 0);*/
+			if(topicSockets.find(topic) != topicSockets.end()){
+				// gets all the sockets subscribed to the topic
+				sockList = topicSockets.find(topic)->second;
+				// creates the packet to send 
+				message = getMessage(buffer); // do something to get the message
+				pubRetainMessage = publish(packetID, topic, message);
+				cout << "sending last message ..." << endl;
+				send(conn->sock, pubRetainMessage.c_str(), pubRetainMessage.length(), 0);
+			}
 			break;
-		//unsubscribe
+		// unsubscribe
 		case 0xa2:
 			packetID[0] = buffer[2];
 			packetID[1] = buffer[3];
+			topicLength = (int)buffer[4] + (int)buffer[5];
+			topic = getTopic(buffer, topicLength, "unsubscribe");
+			removeFromMap(topic, conn->sock);
 			response = unsubscribeAck(packetID);
 			send(conn->sock, response.c_str(), response.length(), 0);
 			break;
-		//publish
+		// publish
 		case 0x30:
 			packetID[0] = buffer[2];
 			packetID[1] = buffer[3];
 			topicLength = (int)buffer[3] + (int)buffer[2];
 			topic = getTopic(buffer, topicLength, "publish");
-			message = getMessage(buffer);
 			sendPublish(message, topic, packetID, sockList, conn->sock);
 			break;
-		//disconnect
+		// publish with retain option
+		case 0x31:
+			packetID[0] = buffer[2];
+			packetID[1] = buffer[3];
+			topicLength = (int)buffer[3] + (int)buffer[2];
+			topic = getTopic(buffer, topicLength, "publish");
+			retain = buffer[0];
+			message = getMessage(buffer);
+			// if the retain option is set, set this message as the one to be sent 
+			if (retain) {
+				lastMessage = message;
+			}
+			sendPublish(message, topic, packetID, sockList, conn->sock);
+			break;
+		// disconnect
 		case 0xe0:
 			close(conn->sock);
 			break;
@@ -249,65 +310,58 @@ void * process(void * ptr)
 			break;
 		}
 	}
-	/* close socket and clean up */
+	// close socket and clean up
     close(conn->sock);
     free(conn);
     pthread_exit(0);
 }
 
-int main(int argc, char const* argv[])
-{
+int main(int argc, char const* argv[]) {
+	// socket identifier 
 	int sock = -1;
+	// address struct
     struct sockaddr_in address;
+	// connection struct
     connection_t * connection;
+	// thread struct
     pthread_t thread;
 
-	map<string, vector<connection_t>> topicSockets;
-
-	/* create socket */
+	// create socket
     sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (sock <= 0)
-    {
+    if (sock <= 0) {
         fprintf(stderr, "%s: error: cannot create socket\n", argv[0]);
         return -3;
     }
 
-	/* bind socket to port */
+	// bind the socket to the MQTT port
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(PORT);
-    if (bind(sock, (struct sockaddr *)&address, sizeof(struct sockaddr_in)) < 0)
-    {
+    if (bind(sock, (struct sockaddr *)&address, sizeof(struct sockaddr_in)) < 0) {
         fprintf(stderr, "%s: error: cannot bind socket to port %d\n", argv[0], PORT);
         return -4;
     }
 
-	/* listen on port */
-    if (listen(sock, 5) < 0)
-    {
+	// listen on the MQTT port
+    if (listen(sock, 5) < 0) {
         fprintf(stderr, "%s: error: cannot listen on port\n", argv[0]);
         return -5;
     }
 
-	printf("%s: ready and listening\n", argv[0]);
+	printf("%s: listening...\n", argv[0]);
 
+	// infinite loop accepting new connections
     while (1){
-
-		/* accept incoming connections */
+		// accept new incoming connections
         connection = (connection_t *)malloc(sizeof(connection_t));
         connection->sock = accept(sock, &connection->address, &connection->addr_len);
-        if (connection->sock <= 0)
-        {
+        if (connection->sock <= 0) {
             free(connection);
-        }
-        else
-        {
-            /* start a new thread but do not wait for it */
+        } else {
+            // start a new thread without waiting for it 
             pthread_create(&thread, 0, process, (void *)connection);
             pthread_detach(thread);
         }
-
-
     }
 	return 0;
 }
