@@ -1,5 +1,9 @@
-// Server side C/C++ program to demonstrate Socket
-// programming
+/* 
+   Clement LEFEBVRE / Implementing IoT protocols
+   Code created for lab 2 : MQTT broker
+   Simple code to handle requests from MQTT clients (publish/subscribe)
+*/
+
 #include <list>
 #include <netinet/in.h>
 #include <stdio.h>
@@ -10,7 +14,6 @@
 #include <string>
 #include <pthread.h>
 #include <map>
-#include <fstream> 
 
 using namespace std;
 
@@ -28,20 +31,6 @@ typedef struct
 // global maps that are used to save the subscribed sockets and retained messages 
 map<string, list<int>> topicSockets;
 map<string, string> topicRetain;
-
-
-int readTemp(){
-	string tempStr;
-	float temp;
-	// Read from the file
-	ifstream MyReadFile("/sys/class/thermal/thermal_zone0/temp");
-	getline (MyReadFile, tempStr);
-	cout << tempStr;
-	temp = stof(tempStr);
-	temp = temp/1000;
-	cout << temp;
-	return temp;
-}
 
 // creates the connect acknowledgment message
 string connectAck() {
@@ -215,7 +204,7 @@ void * process(void * ptr)
 	// response is a string used to create and send the correct response to a message 
 	string response;
 	// topicLength  is a variable used to get the length of the topic from the buffer
-	int topicLength; // check if useful ---------------------------------------------------------------
+	int topicLength;
 	// controlPacketType is a variable used to get the type of message received
 	unsigned char controlPacketType;
 	// packetID is the variable used to get the receiving packet ID and to put on the repsonse message
@@ -256,7 +245,6 @@ void * process(void * ptr)
 		case 0xc0:
 			response = pingAck();
 			send(conn->sock, response.c_str(), response.length(), 0);
-			readTemp();
 			break;
 		// subscribe
 		case 0x82:
@@ -271,8 +259,6 @@ void * process(void * ptr)
 			send(conn->sock, response.c_str(), response.length(), 0);
 			// send last retain to new subscriber
 			cout << topic << endl;
-			/*pubRetainMessage = publish(packetID, topic, lastMessage);
-			send(conn->sock, pubRetainMessage.c_str(), pubRetainMessage.length(), 0);*/
 			for(std::map<string, string>::iterator it = topicRetain.begin(); it != topicRetain.end(); ++it) {
 				cout << it->first << " | " << it-> second << endl;
 			}
@@ -316,9 +302,6 @@ void * process(void * ptr)
 				// if topic doesnt exist in the map
 				topicRetain[topic] = message;
 			}
-			/* for(std::map<string, string>::iterator it = topicRetain.begin(); it != topicRetain.end(); ++it) {
-				cout << it->first << " | " << it-> second << endl;
-			} */
 			sendPublish(message, topic, sockList, conn->sock);
 			break;
 		// disconnect
