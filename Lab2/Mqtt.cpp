@@ -10,6 +10,7 @@
 #include <string>
 #include <pthread.h>
 #include <map>
+#include <fstream> 
 
 using namespace std;
 
@@ -27,6 +28,20 @@ typedef struct
 // global maps that are used to save the subscribed sockets and retained messages 
 map<string, list<int>> topicSockets;
 map<string, string> topicRetain;
+
+
+int readTemp(){
+	string tempStr;
+	float temp;
+	// Read from the file
+	ifstream MyReadFile("/sys/class/thermal/thermal_zone0/temp");
+	getline (MyReadFile, tempStr);
+	cout << tempStr;
+	temp = stof(tempStr);
+	temp = temp/1000;
+	cout << temp;
+	return temp;
+}
 
 // creates the connect acknowledgment message
 string connectAck() {
@@ -241,6 +256,7 @@ void * process(void * ptr)
 		case 0xc0:
 			response = pingAck();
 			send(conn->sock, response.c_str(), response.length(), 0);
+			readTemp();
 			break;
 		// subscribe
 		case 0x82:
