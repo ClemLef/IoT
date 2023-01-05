@@ -83,7 +83,7 @@ string get(string path) {
     // Generate a random message ID
 	string msgId = randomMsgId();
 	// uriOption contains the parameters for the host (3 = 0011 for uri-host and 7 = 0111 for size of coap.me)
-	unsigned char uriOption = 0b00111110;
+	unsigned char uriOption = 0b00111101;
 	// uri is coap.me in binary
 	unsigned char uri[] = {0b00110001,0b00111001,0b00110010,0b00101110,0b00110001,0b00110110,0b00111000,0b00101110,0b00110001,0b00110011,0b00110111,0b00101110,0b00110001,0b00110101,0b00110111};
 
@@ -97,6 +97,7 @@ string get(string path) {
 	message.push_back(method);
 	message += msgId;
 	message.push_back(uriOption);
+	message.push_back(0b00000010);
 	for (int i = 0; i < 15; i++){
 		message.push_back(uri[i]);
 	}
