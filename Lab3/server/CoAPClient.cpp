@@ -54,6 +54,9 @@ char pathOptions(int size){
 	case 7:
 		return 0b10000111;
 		break;
+	case 15:
+		return 0b10001111;
+		break;
 	default:
 		return 0;
 		break;
@@ -80,9 +83,12 @@ string get(string path) {
     // Generate a random message ID
 	string msgId = randomMsgId();
 	// uriOption contains the parameters for the host (3 = 0011 for uri-host and 7 = 0111 for size of coap.me)
-	unsigned char uriOption = 0b00110111;
+	unsigned char uriOption = 0b00111110;
 	// uri is coap.me in binary
-	unsigned char uri[] = {0b01100011,0b01101111,0b01100001,0b01110000,0b00101110,0b01101101,0b01100101};
+	unsigned char uri[] = {0b00110001,0b00111001,0b00110010,0b00101110,0b00110001,0b00110110,0b00111000,0b00101110,0b00110001,0b00110011,0b00110111,0b00101110,0b00110001,0b00110101,0b00110111};
+
+	//{0b00110001,0b00111001,0b00110010,0b00101110,0b00110001,0b00110110,0b00111000,0b00101110,0b00110001,0b00110011,0b00110111,0b00101110,0b00110001,0b00110101,0b00110111};
+	//{0b01100011,0b01101111,0b01100001,0b01110000,0b00101110,0b01101101,0b01100101};
 	// pathOption contains the parameters for the path (8 = 1000 for Location-path and size is defined with the switch)
 	unsigned char pathOption = pathOptions(size);
 
@@ -91,7 +97,7 @@ string get(string path) {
 	message.push_back(method);
 	message += msgId;
 	message.push_back(uriOption);
-	for (int i = 0; i < 7; i++){
+	for (int i = 0; i < 15; i++){
 		message.push_back(uri[i]);
 	}
 	message.push_back(pathOption);
@@ -263,7 +269,7 @@ int main() {
 	// CoAP server network info (134.102.218.18 is coap.me IP)
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_port = htons(PORT);
-	servaddr.sin_addr.s_addr =  inet_addr("127.0.0.1");
+	servaddr.sin_addr.s_addr =  inet_addr("192.168.137.157");//192.168.137.157
 	
 	// Loop asking the user an action to realise
 	while(choice != 0){
