@@ -10,7 +10,8 @@
                 "${file}",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}",
-                "-lpaho-mqtt3c"
+                "-lpaho-mqtt3c", 
+                "-lcoap-3"
             ],
             "options": {
                 "cwd": "${fileDirname}"
