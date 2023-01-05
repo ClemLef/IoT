@@ -289,6 +289,7 @@ void * process(void * ptr)
 			topic = getTopic(buffer, topicLength, "publish");
 			message = getMessage(buffer, topicLength);
 			sendPublish(message, topic, sockList, conn->sock);
+			controlPacketType = 0x00;
 			break;
 		// publish with retain option
 		case 0x31:
@@ -303,6 +304,7 @@ void * process(void * ptr)
 				topicRetain[topic] = message;
 			}
 			sendPublish(message, topic, sockList, conn->sock);
+			controlPacketType = 0x00;
 			break;
 		// disconnect
 		case 0xe0:
