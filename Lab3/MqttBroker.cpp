@@ -1,6 +1,6 @@
 /* 
    Clement LEFEBVRE / Implementing IoT protocols
-   Code created for lab 2 : MQTT broker
+   Code created for lab 3 : Project
    Simple code to handle requests from MQTT clients (publish/subscribe)
 */
 
@@ -204,7 +204,7 @@ void * process(void * ptr)
 	// response is a string used to create and send the correct response to a message 
 	string response;
 	// topicLength  is a variable used to get the length of the topic from the buffer
-	int topicLength; // check if useful ---------------------------------------------------------------
+	int topicLength;
 	// controlPacketType is a variable used to get the type of message received
 	unsigned char controlPacketType;
 	// packetID is the variable used to get the receiving packet ID and to put on the repsonse message
@@ -259,8 +259,6 @@ void * process(void * ptr)
 			send(conn->sock, response.c_str(), response.length(), 0);
 			// send last retain to new subscriber
 			cout << topic << endl;
-			/*pubRetainMessage = publish(packetID, topic, lastMessage);
-			send(conn->sock, pubRetainMessage.c_str(), pubRetainMessage.length(), 0);*/
 			for(std::map<string, string>::iterator it = topicRetain.begin(); it != topicRetain.end(); ++it) {
 				cout << it->first << " | " << it-> second << endl;
 			}
@@ -304,9 +302,6 @@ void * process(void * ptr)
 				// if topic doesnt exist in the map
 				topicRetain[topic] = message;
 			}
-			/* for(std::map<string, string>::iterator it = topicRetain.begin(); it != topicRetain.end(); ++it) {
-				cout << it->first << " | " << it-> second << endl;
-			} */
 			sendPublish(message, topic, sockList, conn->sock);
 			break;
 		// disconnect
