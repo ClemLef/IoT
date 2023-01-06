@@ -14,13 +14,14 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <iostream>
+#include <bitset>
 
 using namespace std;
 
 // define coap port
 #define PORT	5683
 // define size of the buffer
-#define MAXLINE 2048
+#define MAXLINE 1024
 
 // Function getting the headers of the response
 string getHeaders(string buffer){
@@ -34,42 +35,24 @@ string getHeaders(string buffer){
 string getContent(string buffer){
 	string content;
 	// split received message and get the part from the the payload separator (11111111) + 1 to the end 
-	content = buffer.substr(1 + buffer.find(0b11111111));
-	return content;
-}
-
-// convert the size as integer to a binary value for the payload options
-char pathOptions(int size){
-	switch (size)
-	{
-	case 4:
-		return 0b10000100;
-		break;
-	case 5:
-		return 0b10000101;
-		break;
-	case 6:
-		return 0b10000110;
-		break;
-	case 7:
-		return 0b10000111;
-		break;
-	case 15:
-		return 0b10001111;
-		break;
-	default:
-		return 0;
-		break;
+	cout << buffer << endl;
+	for(int i = 0; i < 1024; i++){
+		cout << hex << buffer[i];
+		if(buffer[i] == 0xff){
+			content += buffer[i];
+		}
 	}
+	cout << endl;
+	return content;
 }
 
 // Generating a random message ID
 string randomMsgId(){
-	char randomId[] = {rand() % 255 + 1, rand() % 255 + 1};
+	char randomId[] = {char(rand() % 255 + 1), char(rand() % 255 + 1)};
 	return randomId;
 }
 
-string get(string path) {
+string get(string path, string ip) {
 	// Declaring parameters
 	string message = "";
 	// Get the path length
@@ -82,26 +65,13 @@ string get(string path) {
     unsigned char method = 0b00000001;
     // Generate a random message ID
 	string msgId = randomMsgId();
-	// uriOption contains the parameters for the host (3 = 0011 for uri-host and 7 = 0111 for size of coap.me)
-	unsigned char uriOption = 0b00111101;
-	// uri is coap.me in binary
-	unsigned char uri[] = {0b00110001,0b00111001,0b00110010,0b00101110,0b00110001,0b00110110,0b00111000,0b00101110,0b00110001,0b00110011,0b00110111,0b00101110,0b00110001,0b00110101,0b00110111};
-
-	//{0b00110001,0b00111001,0b00110010,0b00101110,0b00110001,0b00110110,0b00111000,0b00101110,0b00110001,0b00110011,0b00110111,0b00101110,0b00110001,0b00110101,0b00110111};
-	//{0b01100011,0b01101111,0b01100001,0b01110000,0b00101110,0b01101101,0b01100101};
-	// pathOption contains the parameters for the path (8 = 1000 for Location-path and size is defined with the switch)
-	unsigned char pathOption = pathOptions(size);
 
 	// Forming a message based on the parameters
 	message.push_back(settings);
 	message.push_back(method);
 	message += msgId;
-	message.push_back(uriOption);
-	message.push_back(0b00000010);
-	for (int i = 0; i < 15; i++){
-		message.push_back(uri[i]);
-	}
-	message.push_back(pathOption);
+	// 16+32+128 correspond to the bits we need to set to configure the option URI-path (11)
+	message.push_back(16 + 32 + 128 + size);
 	message += path;
 	
 	return message;
@@ -122,12 +92,6 @@ string post(string input, string path) {
     unsigned char method = 0b00000010;
 	// Generate a random message ID
 	string msgId = randomMsgId();
-	// uriOption contains the parameters for the host (3 = 0011 for uri-host and 7 = 0111 for size of coap.me)
-	unsigned char uriOption = 0b00110111;
-	// uri is coap.me in binary
-	unsigned char uri[] = {0b01100011,0b01101111,0b01100001,0b01110000,0b00101110,0b01101101,0b01100101};
-	// pathOption contains the parameters for the path (8 = 1000 for Location-path and size is defined with the switch)
-	unsigned char pathOption = pathOptions(size) ;
 	// payloadOption contains the parameters for the payload (1 = 0001 and 0 = 0000 for length)
 	unsigned char payloadOption = 0b00010000;
 	// separate header and payload with 11111111
@@ -137,11 +101,7 @@ string post(string input, string path) {
 	message.push_back(settings);
 	message.push_back(method);
 	message += msgId;
-	message.push_back(uriOption);
-	for (int i = 0; i < 7; i++){
-		message.push_back(uri[i]);
-	}
-	message.push_back(pathOption);
+	message.push_back(16 + 32 + 128 + size);
 	message += path;
 	message.push_back(payloadOption);
 	message.push_back(separator);
@@ -162,22 +122,12 @@ string del(string path){
     unsigned char method = 0b00000100;
 	// Generate a random message ID
 	string msgId = randomMsgId();
-	// uriOption contains the parameters for the host (3 = 0011 for uri-host and 7 = 0111 for size of coap.me)
-	unsigned char uriOption = 0b00110111;
-	// uri is coap.me in binary
-	unsigned char uri[] = {0b01100011,0b01101111,0b01100001,0b01110000,0b00101110,0b01101101,0b01100101};
-	// pathOption contains the parameters for the path (8 = 1000 for Location-path and size is defined with the switch)
-	unsigned char pathOption = pathOptions(size);
 	
 	// Forming a message based on the parameters
 	message.push_back(settings);
 	message.push_back(method);
 	message += msgId;
-	message.push_back(uriOption);
-	for (int i = 0; i < 7; i++){
-		message.push_back(uri[i]);
-	}
-	message.push_back(pathOption);
+	message.push_back(16 + 32 + 128 + size);
 	message += path;
 	
 	return message;
@@ -196,12 +146,6 @@ string put(string input, string path){
     unsigned char method = 0b00000011;
 	// Generate a random message ID
 	string msgId = randomMsgId();
-	// uriOption contains the parameters for the host (3 = 0011 for uri-host and 7 = 0111 for size of coap.me)
-	unsigned char uriOption = 0b00110111;
-	// uri is coap.me in binary
-	unsigned char uri[] = {0b01100011,0b01101111,0b01100001,0b01110000,0b00101110,0b01101101,0b01100101};
-	// pathOption contains the parameters for the path (8 = 1000 for Location-path and size is defined with the switch)
-	unsigned char pathOption = pathOptions(size) ;
 	// payloadOption contains the parameters for the payload (1 = 0001 and 0 = 0000 for length)
 	unsigned char payloadOption = 0b00010000;
 	// separate header and payload with 11111111
@@ -211,11 +155,7 @@ string put(string input, string path){
 	message.push_back(settings);
 	message.push_back(method);
 	message += msgId;
-	message.push_back(uriOption);
-	for (int i = 0; i < 7; i++){
-		message.push_back(uri[i]);
-	}
-	message.push_back(pathOption);
+	message.push_back(16 + 32 + 128 + size);
 	message += path;
 	message.push_back(payloadOption);
 	message.push_back(separator);
@@ -224,7 +164,7 @@ string put(string input, string path){
 }
 
 // Function used to send requests to send a request to a coap server
-void sendRequest(int sockfd, sockaddr_in servaddr, string message, char* buffer){
+void sendRequest(int sockfd, sockaddr_in servaddr, string message, string buffer){
 	// Size of the response
 	unsigned int n = 0;
 	// Size of the server address
@@ -234,7 +174,7 @@ void sendRequest(int sockfd, sockaddr_in servaddr, string message, char* buffer)
 	sendto(sockfd, message.c_str(), message.length(), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
 	
 	// Get the response from the server
-    n = recvfrom(sockfd, (char *)buffer, MAXLINE + 1,
+    n = recvfrom(sockfd, (char *)buffer.c_str(), MAXLINE + 1,
             MSG_WAITALL, (struct sockaddr *) &servaddr,
             &len);
 	// Closing the answer at the end
@@ -242,7 +182,7 @@ void sendRequest(int sockfd, sockaddr_in servaddr, string message, char* buffer)
 
 	// Printing the headers and contents
     //cout << getHeaders(buffer) << endl;
-	cout << getContent(buffer) << endl;
+	cout <<  getContent(buffer) << endl;
 }
 
 // Main function of the program
@@ -257,6 +197,7 @@ int main() {
 	string message, input, path;
 	// Variable determining the choice of the user
 	int choice = -1;
+	string ip;
 
 	// Create a socket file descriptor
 	if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
@@ -266,11 +207,15 @@ int main() {
 	
 	// Reserve memory to store the server address
 	memset(&servaddr, 0, sizeof(servaddr));
+
+	cout << "Enter the ip address of the sensor : ";
+	cin >> ip;
+	cout << ip << endl;
 		
-	// CoAP server network info (134.102.218.18 is coap.me IP)
+	// CoAP server network info
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_port = htons(PORT);
-	servaddr.sin_addr.s_addr =  inet_addr("192.168.137.157");//192.168.137.157
+	servaddr.sin_addr.s_addr = inet_addr(ip.c_str());
 	
 	// Loop asking the user an action to realise
 	while(choice != 0){
@@ -295,7 +240,7 @@ int main() {
 			// Ask for a path and send get request
 			cout << "Enter the path to display : ";
 			cin >> path;
-			message = get(path);
+			message = get(path, ip);
 			sendRequest(sockfd, servaddr, message, buffer);
 			break;
 		case 2:
@@ -309,7 +254,7 @@ int main() {
 			cout << "Status : ";
 			sendRequest(sockfd, servaddr, message, buffer);
 			// Display the contents of the path using a get
-			message = get(path);
+			message = get(path, ip);
 			cout << "Contents : ";
 			sendRequest(sockfd, servaddr, message, buffer);
 			break;
@@ -324,7 +269,7 @@ int main() {
 			cout << "Status : ";
 			sendRequest(sockfd, servaddr, message, buffer);
 			// Display the contents of the path using a get
-			message = get(path);
+			message = get(path, ip);
 			cout << "Contents : ";
 			sendRequest(sockfd, servaddr, message, buffer);
 			break;
