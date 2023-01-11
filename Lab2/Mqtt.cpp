@@ -240,11 +240,13 @@ void * process(void * ptr)
 		case 0x10:
 			response = connectAck();
 			send(conn->sock, response.c_str(), response.length(), 0);
+			buffer[0] = 0x00;
 			break;
 		// ping
 		case 0xc0:
 			response = pingAck();
 			send(conn->sock, response.c_str(), response.length(), 0);
+			buffer[0] = 0x00;
 			break;
 		// subscribe
 		case 0x82:
@@ -270,6 +272,7 @@ void * process(void * ptr)
 				cout << "sending last message ..." << endl;
 				send(conn->sock, pubRetainMessage.c_str(), pubRetainMessage.length(), 0);
 			}
+			buffer[0] = 0x00;
 			break;
 		// unsubscribe
 		case 0xa2:
@@ -280,6 +283,7 @@ void * process(void * ptr)
 			removeFromMap(topic, conn->sock);
 			response = unsubscribeAck(packetID);
 			send(conn->sock, response.c_str(), response.length(), 0);
+			buffer[0] = 0x00;
 			break;
 		// publish without retain
 		case 0x30:
@@ -289,6 +293,7 @@ void * process(void * ptr)
 			topic = getTopic(buffer, topicLength, "publish");
 			message = getMessage(buffer, topicLength);
 			sendPublish(message, topic, sockList, conn->sock);
+			buffer[0] = 0x00;
 			break;
 		// publish with retain option
 		case 0x31:
@@ -303,6 +308,7 @@ void * process(void * ptr)
 				topicRetain[topic] = message;
 			}
 			sendPublish(message, topic, sockList, conn->sock);
+			buffer[0] = 0x00;
 			break;
 		// disconnect
 		case 0xe0:

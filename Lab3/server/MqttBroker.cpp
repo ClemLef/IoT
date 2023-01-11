@@ -260,10 +260,10 @@ void * process(void * ptr)
 			response = subscribeAck(packetID);
 			send(conn->sock, response.c_str(), response.length(), 0);
 			// send last retain to new subscriber
-			cout << topic << endl;
+			/*cout << topic << endl;
 			for(std::map<string, string>::iterator it = topicRetain.begin(); it != topicRetain.end(); ++it) {
 				cout << it->first << " | " << it-> second << endl;
-			}
+			}*/
 			if(topicSockets.find(topic) != topicSockets.end() && topicRetain.find(topic)->second != ""){
 				// gets the last retained message of the topic
 				message = topicRetain.find(topic)->second; //problem here the retain msg is also put in other topics
