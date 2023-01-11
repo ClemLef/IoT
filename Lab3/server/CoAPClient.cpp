@@ -240,6 +240,7 @@ int main() {
 			cout << "Enter the path to display : ";
 			cin >> path;
 			message = get(path, ip);
+			cout << message;
 			sendRequest(sockfd, servaddr, message, buffer);
 			break;
 		case 2:
