@@ -14,7 +14,6 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <iostream>
-#include <bitset>
 
 using namespace std;
 
@@ -169,10 +168,10 @@ void sendRequest(int sockfd, sockaddr_in servaddr, string message, string buffer
 	unsigned int n = 0;
 	// Size of the server address
 	unsigned int len = 0;
-
+	cout << 1; 
 	// Sending the message to the test server
 	sendto(sockfd, message.c_str(), message.length(), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
-	
+	cout << 2;
 	// Get the response from the server
     n = recvfrom(sockfd, (char *)buffer.c_str(), MAXLINE + 1,
             MSG_WAITALL, (struct sockaddr *) &servaddr,
