@@ -54,25 +54,28 @@ string randomMsgId(){
 string get(string path, string ip) {
 	// Declaring parameters
 	string message = "";
+	cout << 1;
 	// Get the path length
 	int size = path.length();
-
+	cout << 2;
 	// Declaring parameters as bits
 	// Settings represent Version (01), Type (01) and Token length (0000)
     unsigned char settings = 0b01010000;
 	// Method respresent the method used (GET = 0.01)
     unsigned char method = 0b00000001;
     // Generate a random message ID
+	cout << 3;
 	string msgId = randomMsgId();
-
+	cout << 4;
 	// Forming a message based on the parameters
 	message.push_back(settings);
 	message.push_back(method);
 	message += msgId;
+	cout << 5;
 	// 16+32+128 correspond to the bits we need to set to configure the option URI-path (11)
 	message.push_back(16 + 32 + 128 + size);
 	message += path;
-	
+	cout << 6;
 	return message;
 }
 
