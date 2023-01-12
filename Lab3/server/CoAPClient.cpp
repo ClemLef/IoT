@@ -236,7 +236,7 @@ int main() {
 		cout << "Make your choice : ";
 		cin >> choice;
 		// Clearing the console after a choice is made
-		system("clear");
+		//system("clear");
 		switch (choice)
 		{
 		case 0:
@@ -253,7 +253,7 @@ int main() {
 		case 2:
 			// Ask for a value and a path and sends a request
 			cout << "Enter the value you want to send : ";
-			input = 1;
+			input = "1";
 			cout << "Enter the path : ";
 			path = "light";
 			message = post(input, path);
