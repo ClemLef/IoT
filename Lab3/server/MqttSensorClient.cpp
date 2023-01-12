@@ -228,9 +228,10 @@ void * process(void * ptr)
 	while(1){
 		message = get("occupancy");
 		sendRequest(sockfd, servaddr, message, buffer);
-		string payloadMQTT = getContent(buffer, (int)strlen(buffer));
-		messageMQTT.payload = &payloadMQTT;
-		messageMQTT.payloadlen = (int)strlen(buffer);
+		
+		const char* payloadMQTT = getContent(buffer, 9).c_str();
+		messageMQTT.payload = (void *)payloadMQTT;
+		messageMQTT.payloadlen = 1;
 		MQTTClient_publishMessage(mqttClient, "occupancy", &messageMQTT, &deliveryToken);
 		sleep(5);
 	}
