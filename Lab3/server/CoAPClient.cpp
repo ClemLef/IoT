@@ -177,7 +177,8 @@ void sendRequest(int sockfd, sockaddr_in servaddr, string message, char* buffer)
 	unsigned int len = 0;
 	cout << 1 << endl; 
 	// Sending the message to the test server
-	sendto(sockfd, message.c_str(), message.length(), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
+	cout << sendto(sockfd, message.c_str(), message.length(), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
+	cout << endl;
 	cout << 2 << endl;
 	// Get the response from the server
     /*n = recvfrom(sockfd, buffer, MAXLINE + 1,
