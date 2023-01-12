@@ -14,7 +14,7 @@
 
 using namespace std;
 
-const char *ADDRESS_MQTT_BROKER = "192.168.137.64";
+const char *ADDRESS_MQTT_BROKER = "tcp://192.168.137.107";
 const char *ADDRESS_SENSOR = "192.168.137.236";
 
 #define CLIENTID    "ESP8266"
@@ -104,21 +104,19 @@ void sendRequest(int sockfd, sockaddr_in servaddr, string message, char *buffer)
 	unsigned int n = 0;
 	// Size of the server address
 	unsigned int len = 0;
-	cout << "sendto"<< endl;
 	// Sending the message to the test server
 	sendto(sockfd, message.c_str(), message.length(), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
-	cout << "revfrom" << endl;
+
 	// Get the response from the server
-    /*n = recvfrom(sockfd, buffer, MAXLINE + 1,
+    n = recvfrom(sockfd, buffer, MAXLINE + 1,
             MSG_WAITALL, (struct sockaddr *) &servaddr,
             &len);
-	cout << n << endl;*/
 	// Closing the answer at the end
     buffer[n] = '\0';
 
 	// Printing the headers and contents
     //cout << getHeaders(buffer) << endl;
-	//cout << getContent(buffer, n) << endl;
+	cout << getContent(buffer, n) << endl;
 }
 
 int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *message)
@@ -152,7 +150,6 @@ int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *m
 	payload = (char*)message->payload;
 	cout << *(payload) << endl;
 	messageCoAP = put(*(payload), TOPIC);
-	cout << 2 << endl;
 	sendRequest(sockfd, servaddr, messageCoAP, buffer);
 
     printf("Message arrived\n");
@@ -179,11 +176,74 @@ void delivered(void *context, MQTTClient_deliveryToken dt)
 }
 
 
+void * process(void * ptr)
+{
+	//MQTT
+	int rc;
+    MQTTClient mqttClient;
+    MQTTClient_connectOptions connectionOptions =     MQTTClient_connectOptions_initializer;
+    MQTTClient_message messageMQTT = MQTTClient_message_initializer;
+    MQTTClient_deliveryToken deliveryToken;
 
+    MQTTClient_create(&mqttClient, ADDRESS_MQTT_BROKER, CLIENTID, 
+    MQTTCLIENT_PERSISTENCE_NONE, NULL);
+
+	connectionOptions.keepAliveInterval = 20;
+    connectionOptions.cleansession = 1;
+
+    if (MQTTClient_connect(mqttClient, &connectionOptions) != MQTTCLIENT_SUCCESS) {
+        printf("Failed to connect\n");
+        pthread_exit(0);
+    }
+
+	messageMQTT.qos = QOS;
+	messageMQTT.retained = 0;
+
+	//CoAP
+	// Socket file descriptor
+	int sockfd;
+	// Buffer to store the response
+	char buffer[MAXLINE];
+	// Address of the server
+	struct sockaddr_in servaddr;
+	// message to send the request, input of the user, path the user wants to access
+	string message;
+
+	// Create a socket file descriptor
+	if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+		perror("socket creation failed");
+		exit(EXIT_FAILURE);
+	}
+	
+	// Reserve memory to store the server address
+	memset(&servaddr, 0, sizeof(servaddr));
+
+	// CoAP server network info
+	servaddr.sin_family = AF_INET;
+	servaddr.sin_port = htons(PORT);
+	servaddr.sin_addr.s_addr = inet_addr(ADDRESS_SENSOR);
+
+
+
+	while(1){
+		message = get("occupancy");
+		sendRequest(sockfd, servaddr, message, buffer);
+		string payloadMQTT = getContent(buffer, (int)strlen(buffer));
+		messageMQTT.payload = &payloadMQTT;
+		messageMQTT.payloadlen = (int)strlen(buffer);
+		MQTTClient_publishMessage(mqttClient, "occupancy", &messageMQTT, &deliveryToken);
+		sleep(5);
+	}
+    pthread_exit(0);
+}
 
 int main(int argc, char* argv[]) {
-    //CoAP
-    
+	// thread struct
+    pthread_t thread;
+    //thread
+	
+    pthread_create(&thread, 0, process, 0);
+	pthread_detach(thread);
 
     //MQTT
 	int rc;
@@ -236,6 +296,23 @@ int main(int argc, char* argv[]) {
         	ch = getchar();
     	} while (ch!='Q' && ch != 'q');
 
+		MQTTClient client;
+		MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
+		MQTTClient_message pubmsg = MQTTClient_message_initializer;
+		MQTTClient_deliveryToken token;
+
+		pubmsg.payload = (void*)"zizi";
+		pubmsg.payloadlen = (int)strlen(PAYLOAD);
+		pubmsg.qos = QOS;
+		pubmsg.retained = 0;
+
+		if ((rc = MQTTClient_publishMessage(client, TOPIC, &pubmsg, &token)) != MQTTCLIENT_SUCCESS)
+            {
+                printf("Failed to publish message, return code %d\n", rc);
+                exit(EXIT_FAILURE);
+            }
+            rc = MQTTClient_waitForCompletion(client, token, TIMEOUT);
+
         if ((rc = MQTTClient_unsubscribe(mqttClient, TOPIC)) != MQTTCLIENT_SUCCESS)
         {
         	printf("Failed to unsubscribe, return code %d\n", rc);
@@ -243,11 +320,6 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    while(1){
-        /*messageReceived = get("temp");
-        sendRequest(sockfd, servaddr, messageReceived, buffer);
-        sleep(2);*/
-    }
     
     //MQTTClient_publishMessage(mqttClient, TOPIC, &message, &deliveryToken);
     MQTTClient_disconnect(mqttClient, 5000);

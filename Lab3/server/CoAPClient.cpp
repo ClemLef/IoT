@@ -31,17 +31,11 @@ string getHeaders(string buffer){
 }
 
 // Function getting the contents of the response
-string getContent(string buffer){
+string getContent(char* buffer, int bufferSize){
 	string content;
-	// split received message and get the part from the the payload separator (11111111) + 1 to the end 
-	cout << buffer << endl;
-	for(int i = 0; i < 1024; i++){
-		cout << hex << buffer[i];
-		if(buffer[i] == 0xff){
-			content += buffer[i];
-		}
+	for(int i = 8; i < bufferSize; i++){
+		content += buffer[i];
 	}
-	cout << endl;
 	return content;
 }
 
@@ -54,28 +48,22 @@ string randomMsgId(){
 string get(string path, string ip) {
 	// Declaring parameters
 	string message = "";
-	cout << 1;
 	// Get the path length
 	int size = path.length();
-	cout << 2;
 	// Declaring parameters as bits
 	// Settings represent Version (01), Type (01) and Token length (0000)
     unsigned char settings = 0b01010000;
 	// Method respresent the method used (GET = 0.01)
     unsigned char method = 0b00000001;
     // Generate a random message ID
-	cout << 3;
 	string msgId = randomMsgId();
-	cout << 4;
 	// Forming a message based on the parameters
 	message.push_back(settings);
 	message.push_back(method);
 	message += msgId;
-	cout << 5;
 	// 16+32+128 correspond to the bits we need to set to configure the option URI-path (11)
 	message.push_back(16 + 32 + 128 + size);
 	message += path;
-	cout << 6;
 	return message;
 }
 
@@ -137,10 +125,8 @@ string del(string path){
 
 string put(string input, string path){
 	// Declaring parameters
-	cout << 1 << endl;
 	string message = "";
 	// Get the path length
-	cout << 2 << endl;
 	int size = path.length();
 
 	// Declaring parameters as bits
@@ -154,7 +140,6 @@ string put(string input, string path){
 	unsigned char payloadOption = 0b00010000;
 	// separate header and payload with 11111111
 	unsigned char separator = 0b11111111;
-	cout << 3 << endl;
 
 	// Forming a message based on the parameters
 	message.push_back(settings);
@@ -164,33 +149,28 @@ string put(string input, string path){
 	message += path;
 	message.push_back(payloadOption);
 	message.push_back(separator);
-	cout << 4 << endl;
 	message += input;
 	return message;
 }
 
 // Function used to send requests to send a request to a coap server
-void sendRequest(int sockfd, sockaddr_in servaddr, string message, char* buffer){
+void sendRequest(int sockfd, sockaddr_in servaddr, string message, char *buffer){
 	// Size of the response
 	unsigned int n = 0;
 	// Size of the server address
 	unsigned int len = 0;
-	cout << 1 << endl; 
 	// Sending the message to the test server
-	cout << sendto(sockfd, message.c_str(), message.length(), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
-	cout << endl;
-	cout << 2 << endl;
+	sendto(sockfd, message.c_str(), message.length(), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
 	// Get the response from the server
-    /*n = recvfrom(sockfd, buffer, MAXLINE + 1,
+    n = recvfrom(sockfd, buffer, MAXLINE + 1,
             MSG_WAITALL, (struct sockaddr *) &servaddr,
             &len);
-	cout << n << endl;*/
 	// Closing the answer at the end
-    //buffer[n] = '\0';
+    buffer[n] = '\0';
 
 	// Printing the headers and contents
     //cout << getHeaders(buffer) << endl;
-	//cout <<  getContent(buffer) << endl;
+	cout << getContent(buffer, n) << endl;
 }
 
 // Main function of the program
@@ -216,29 +196,83 @@ int main() {
 	// Reserve memory to store the server address
 	memset(&servaddr, 0, sizeof(servaddr));
 
-	cout << "Enter the ip address of the sensor : ";
+	//cout << "Enter the ip address of the sensor : ";
 	ip = "192.168.137.236";
-	cout << ip << endl;
 		
 	// CoAP server network info
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_port = htons(PORT);
 	servaddr.sin_addr.s_addr = inet_addr(ip.c_str());
 	
-	
-	// Ask for a value and a path and sends a request
-	cout << "sending " << endl;
-	input = "1";
-	path = "light";
-	message = post(input, path);
-	// Print the status of the command
-	cout << "Status : " << endl;
-	sendRequest(sockfd, servaddr, message, buffer);
-	// Display the contents of the path using a get
-	/*message = get(path, ip);
-	cout << "Contents : " << endl;;
-	sendRequest(sockfd, servaddr, message, buffer);*/
-			
+	// Loop asking the user an action to realise
+	while(choice != 0){
+		cout << endl;
+		cout << "*------- Menu -------*" << endl;
+		cout << "  1. Send a GET" << endl;
+		cout << "  2. Send a POST" << endl;
+		cout << "  3. Send a PUT" << endl;
+		cout << "  4. Send a DELETE" << endl;
+		cout << "  0. Quit" << endl;
+		cout << "*--------------------*" << endl;
+		cout << "Make your choice : ";
+		cin >> choice;
+		// Clearing the console after a choice is made
+		system("clear");
+		switch (choice)
+		{
+		case 0:
+			// Quit the app
+			break;
+		case 1:
+			// Ask for a path and send get request
+			cout << "Enter the path to display : ";
+			cin >> path;
+			message = get(path, ip);
+			sendRequest(sockfd, servaddr, message, buffer);
+			break;
+		case 2:
+			// Ask for a value and a path and sends a request
+			cout << "Enter the value you want to send : ";
+			cin >> input;
+			cout << "Enter the path : ";
+			cin >> path;
+			message = post(input, path);
+			// Print the status of the command
+			cout << "Status : ";
+			sendRequest(sockfd, servaddr, message, buffer);
+			// Display the contents of the path using a get
+			message = get(path, ip);
+			cout << "Contents : ";
+			sendRequest(sockfd, servaddr, message, buffer);
+			break;
+		case 3:
+			// Ask for a value and a path and sends a request
+			cout << "Enter the value you want to send : ";
+			cin >> input;
+			cout << "Enter the path : ";
+			cin >> path;
+			message = put(input, path);
+			// Print the status of the command
+			cout << "Status : ";
+			sendRequest(sockfd, servaddr, message, buffer);
+			// Display the contents of the path using a get
+			message = get(path, ip);
+			cout << "Contents : ";
+			sendRequest(sockfd, servaddr, message, buffer);
+			break;
+		case 4:
+			// Ask for a path and send delete request
+			cout << "Enter the path to delete : ";
+			cin >> path;
+			message = del(path);
+			sendRequest(sockfd, servaddr, message, buffer);
+			break;
+		default:
+			// a random value was choosen
+			cout << "Choose a number between 0 and 5" << endl;
+			break;
+		}
+	}
 
 	return 0;
 }

@@ -186,9 +186,7 @@ void sendPublish(string message, string topic, list<int> sockList, int socket){
 		// sending to all sockets in the subscribed list
 		for (auto const &i: sockList) {
 			if(i != socket){
-				cout << i;
 				send(i, response.c_str(), response.length(), 0);
-				cout << " done" << endl;
 			}
 		}
 	}
