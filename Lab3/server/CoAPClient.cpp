@@ -253,7 +253,7 @@ int main() {
 		case 2:
 			// Ask for a value and a path and sends a request
 			cout << "Enter the value you want to send : ";
-			cin >> input;
+			input = 1;
 			cout << "Enter the path : ";
 			path = "light";
 			message = post(input, path);
