@@ -104,9 +104,10 @@ void sendRequest(int sockfd, sockaddr_in servaddr, string message, char *buffer)
 	unsigned int n = 0;
 	// Size of the server address
 	unsigned int len = 0;
+	cout << "sendto"<< endl;
 	// Sending the message to the test server
 	sendto(sockfd, message.c_str(), message.length(), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
-
+	cout << "revfrom" << endl;
 	// Get the response from the server
     n = recvfrom(sockfd, buffer, MAXLINE + 1,
             MSG_WAITALL, (struct sockaddr *) &servaddr,
@@ -150,6 +151,7 @@ int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *m
 	payload = (char*)message->payload;
 	cout << *(payload) << endl;
 	messageCoAP = put(*(payload), TOPIC);
+	cout << 2 << endl;
 	sendRequest(sockfd, servaddr, messageCoAP, buffer);
 
     printf("Message arrived\n");
