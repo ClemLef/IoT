@@ -15,7 +15,7 @@
 using namespace std;
 
 const char *ADDRESS_MQTT_BROKER = "tcp://192.168.137.107";
-const char *ADDRESS_SENSOR = "192.168.137.18";
+const char *ADDRESS_SENSOR = "192.168.137.236";
 
 #define CLIENTID    "ESP8266"
 #define TOPIC       "light"
@@ -58,7 +58,7 @@ string get(string path) {
 	return message;
 }
 
-string put(string input, string path){
+string put(char input, string path){
 	// Declaring parameters
 	string message = "";
 	// Get the path length
@@ -146,12 +146,10 @@ int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *m
 	servaddr.sin_port = htons(PORT);
 	servaddr.sin_addr.s_addr = inet_addr(ADDRESS_SENSOR);
 
-	string payload;
-	for(int i = 0; i < message->payloadlen; i++){
-		payload += (char*)message->payload;
-	}
-	cout << payload << endl;
-	messageCoAP = put(payload, TOPIC);
+	char* payload;
+	payload = (char*)message->payload;
+	cout << *(payload) << endl;
+	messageCoAP = put(*(payload), TOPIC);
 	sendRequest(sockfd, servaddr, messageCoAP, buffer);
 
     printf("Message arrived\n");
