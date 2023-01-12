@@ -185,11 +185,11 @@ void sendRequest(int sockfd, sockaddr_in servaddr, string message, char* buffer)
             &len);
 	cout << n << endl;*/
 	// Closing the answer at the end
-    buffer[n] = '\0';
+    //buffer[n] = '\0';
 
 	// Printing the headers and contents
     //cout << getHeaders(buffer) << endl;
-	cout <<  getContent(buffer) << endl;
+	//cout <<  getContent(buffer) << endl;
 }
 
 // Main function of the program
@@ -234,9 +234,9 @@ int main() {
 	cout << "Status : " << endl;
 	sendRequest(sockfd, servaddr, message, buffer);
 	// Display the contents of the path using a get
-	message = get(path, ip);
+	/*message = get(path, ip);
 	cout << "Contents : " << endl;;
-	sendRequest(sockfd, servaddr, message, buffer);
+	sendRequest(sockfd, servaddr, message, buffer);*/
 			
 
 	return 0;
