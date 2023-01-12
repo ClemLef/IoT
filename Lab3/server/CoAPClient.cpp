@@ -223,75 +223,20 @@ int main() {
 	servaddr.sin_port = htons(PORT);
 	servaddr.sin_addr.s_addr = inet_addr(ip.c_str());
 	
-	// Loop asking the user an action to realise
-	while(choice != 0){
-		cout << endl;
-		cout << "*------- Menu -------*" << endl;
-		cout << "  1. Send a GET" << endl;
-		cout << "  2. Send a POST" << endl;
-		cout << "  3. Send a PUT" << endl;
-		cout << "  4. Send a DELETE" << endl;
-		cout << "  0. Quit" << endl;
-		cout << "*--------------------*" << endl;
-		cout << "Make your choice : ";
-		cin >> choice;
-		// Clearing the console after a choice is made
-		//system("clear");
-		switch (choice)
-		{
-		case 0:
-			// Quit the app
-			break;
-		case 1:
-			// Ask for a path and send get request
-			cout << "Enter the path to display : ";
-			cin >> path;
-			message = get(path, ip);
-			cout << message;
-			sendRequest(sockfd, servaddr, message, buffer);
-			break;
-		case 2:
-			// Ask for a value and a path and sends a request
-			cout << "Enter the value you want to send : ";
-			input = "1";
-			cout << "Enter the path : ";
-			path = "light";
-			message = post(input, path);
-			// Print the status of the command
-			cout << "Status : ";
-			sendRequest(sockfd, servaddr, message, buffer);
-			// Display the contents of the path using a get
-			message = get(path, ip);
-			cout << "Contents : ";
-			sendRequest(sockfd, servaddr, message, buffer);
-			break;
-		case 3:
-			// Ask for a value and a path and sends a request
-			cout << "Enter the value you want to send : ";
-			cin >> input;
-			cout << "Enter the path : ";
-			cin >> path;
-			message = put(input, path);
-			// Print the status of the command
-			cout << "Status : ";
-			sendRequest(sockfd, servaddr, message, buffer);
-			// Display the contents of the path using a get
-			message = get(path, ip);
-			cout << "Contents : ";
-			sendRequest(sockfd, servaddr, message, buffer);
-			break;
-		case 4:
-			// Ask for a path and send delete request
-			cout << "Enter the path to delete : ";
-			cin >> path;
-			message = del(path);
-			sendRequest(sockfd, servaddr, message, buffer);
-			break;
-		default:
-			// a random value was choosen
-			cout << "Choose a number between 0 and 5" << endl;
-			break;
-		}
+	
+	// Ask for a value and a path and sends a request
+	cout << "sending " << endl;
+	input = "1";
+	path = "light";
+	message = post(input, path);
+	// Print the status of the command
+	cout << "Status : " << endl;
+	sendRequest(sockfd, servaddr, message, buffer);
+	// Display the contents of the path using a get
+	message = get(path, ip);
+	cout << "Contents : " << endl;;
+	sendRequest(sockfd, servaddr, message, buffer);
+			
 	}
 
 	return 0;
