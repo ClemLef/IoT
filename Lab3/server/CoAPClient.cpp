@@ -237,7 +237,6 @@ int main() {
 	cout << "Contents : " << endl;;
 	sendRequest(sockfd, servaddr, message, buffer);
 			
-	}
 
 	return 0;
 }
