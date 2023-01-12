@@ -180,10 +180,10 @@ void sendRequest(int sockfd, sockaddr_in servaddr, string message, char* buffer)
 	sendto(sockfd, message.c_str(), message.length(), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
 	cout << 2 << endl;
 	// Get the response from the server
-    n = recvfrom(sockfd, buffer, MAXLINE + 1,
+    /*n = recvfrom(sockfd, buffer, MAXLINE + 1,
             MSG_WAITALL, (struct sockaddr *) &servaddr,
             &len);
-	cout << n << endl;
+	cout << n << endl;*/
 	// Closing the answer at the end
     buffer[n] = '\0';
 
