@@ -137,8 +137,10 @@ string del(string path){
 
 string put(string input, string path){
 	// Declaring parameters
+	cout << 1 << endl;
 	string message = "";
 	// Get the path length
+	cout << 2 << endl;
 	int size = path.length();
 
 	// Declaring parameters as bits
@@ -152,6 +154,7 @@ string put(string input, string path){
 	unsigned char payloadOption = 0b00010000;
 	// separate header and payload with 11111111
 	unsigned char separator = 0b11111111;
+	cout << 3 << endl;
 
 	// Forming a message based on the parameters
 	message.push_back(settings);
@@ -161,6 +164,7 @@ string put(string input, string path){
 	message += path;
 	message.push_back(payloadOption);
 	message.push_back(separator);
+	cout << 4 << endl;
 	message += input;
 	return message;
 }
