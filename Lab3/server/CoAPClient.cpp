@@ -215,7 +215,7 @@ int main() {
 	memset(&servaddr, 0, sizeof(servaddr));
 
 	cout << "Enter the ip address of the sensor : ";
-	cin >> ip;
+	ip = "192.168.137.236";
 	cout << ip << endl;
 		
 	// CoAP server network info
@@ -255,7 +255,7 @@ int main() {
 			cout << "Enter the value you want to send : ";
 			cin >> input;
 			cout << "Enter the path : ";
-			cin >> path;
+			path = "light";
 			message = post(input, path);
 			// Print the status of the command
 			cout << "Status : ";
