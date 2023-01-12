@@ -112,6 +112,7 @@ void sendRequest(int sockfd, sockaddr_in servaddr, string message, char *buffer)
     n = recvfrom(sockfd, buffer, MAXLINE + 1,
             MSG_WAITALL, (struct sockaddr *) &servaddr,
             &len);
+	cout << n << endl;
 	// Closing the answer at the end
     buffer[n] = '\0';
 
