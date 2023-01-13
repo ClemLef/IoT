@@ -7,7 +7,7 @@
 
 using namespace std;
 
-#define ADDRESS     "192.168.137.107"
+#define ADDRESS     "192.168.137.64"
 #define CLIENTID    "MqttFrontEnd"
 #define TOPIC       "occupancy"
 #define QOS         0
