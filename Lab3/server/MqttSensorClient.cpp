@@ -66,8 +66,8 @@ string get(string path) {
 	message.push_back(msgId[1]);
 	// 16+32+128 correspond to the bits we need to set to configure the option URI-path (11)
 	message += uriPath;
-	for(int i = 0; i < 5; i++){
-		message.push_back(path2[i]);
+	for(int i = 0; i < 8; i++){
+		message.push_back(pathOccupancy[i]);
 	}
 	cout << message.length() << endl;
 	return message;
