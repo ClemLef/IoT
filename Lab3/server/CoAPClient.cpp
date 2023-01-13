@@ -55,16 +55,23 @@ string get(string path, string ip) {
     unsigned char settings = 0b01010000;
 	// Method respresent the method used (GET = 0.01)
     unsigned char method = 0b00000001;
+
+	unsigned char msgId[] = {0b00000000, 0b00000001};
+
 	unsigned char uriPath = 0b10110101;
     // Generate a random message ID
-	string msgId = randomMsgId();
+	unsigned char path2[] = {0b01101100,0b01101001,0b01100111,0b01101000,0b01110100};
+	
 	// Forming a message based on the parameters
-	message += settings;
-	message += method;
-	message += msgId;
+	message.push_back(settings);
+	message.push_back(method);
+	message.push_back(msgId[0]);
+	message.push_back(msgId[1]);
 	// 16+32+128 correspond to the bits we need to set to configure the option URI-path (11)
 	message += uriPath;
-	message += path;
+	for(int i = 0; i < 5; i++){
+		message.push_back(path2[i]);
+	}
 	cout << message.length() << endl;
 	return message;
 }
