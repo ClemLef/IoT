@@ -18,11 +18,12 @@ volatile MQTTClient_deliveryToken deliveredtoken;
 
 int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *message)
 {
-    cout << "press q to quit" << endl;
 	char* payload = (char*)message->payload;
     if(*(payload) == '1'){
+        system("clear");
         cout << "the room is free" << endl;
     } else {
+        system("clear");
         cout << "the room is occupied" << endl;
     }
     MQTTClient_freeMessage(&message);
@@ -90,7 +91,7 @@ int main(int argc, char* argv[])
 			// Quit the app
 			break;
 		case 1:
-
+            cout << "press q to quit" << endl;
             if ((rc = MQTTClient_subscribe(client, TOPIC, QOS)) != MQTTCLIENT_SUCCESS)
             {
                 printf("Failed to subscribe, return code %d\n", rc);
@@ -109,8 +110,6 @@ int main(int argc, char* argv[])
                     rc = EXIT_FAILURE;
                 }
             }
-            MQTTClient_disconnect(client, 5000);
-            MQTTClient_destroy(&client);
 			break;
 		case 2:
             pubmsg.payload = (void*)"0";
@@ -138,7 +137,6 @@ int main(int argc, char* argv[])
             break;
         }
     }
-
     if ((rc = MQTTClient_disconnect(client, 10000)) != MQTTCLIENT_SUCCESS)
     	printf("Failed to disconnect, return code %d\n", rc);
     MQTTClient_destroy(&client);
