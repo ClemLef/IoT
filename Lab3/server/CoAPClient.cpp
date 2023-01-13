@@ -229,7 +229,8 @@ int main() {
 		case 1:
 			// Ask for a path and send get request
 			cout << "Enter the path to display : ";
-			cin >> path;
+			//cin >> path;
+			path = "light";
 			message = get(path, ip);
 			sendRequest(sockfd, servaddr, message, buffer);
 			break;
