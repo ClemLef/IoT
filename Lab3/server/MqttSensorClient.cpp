@@ -4,6 +4,8 @@
    Multithread: 
    Main thread: converts MQTT publish messages into CoAP and sends to sensor to turn ON/OFF light
    2nd thread: polling occupancy from sensor via CoAP and sending the value to the MQTT broker
+
+   This code is based from the examples of the library paho.mqtt.c (https://github.com/eclipse/paho.mqtt.c)
 */
 
 #include <cstdio>
@@ -37,12 +39,13 @@ volatile MQTTClient_deliveryToken deliveredtoken;
 #define MAXLINE 1024
 
 // Generating a random message ID
+// For some reason this function did not work on the raspberry
 string randomMsgId(){
 	char randomId[] = {char(rand() % 255 + 1), char(rand() % 255 + 1)};
 	return randomId;
 }
 
-string get(string path) {
+string get() {
 	// Declaring parameters
 	string message = "";
 	// Declaring parameters as bits
@@ -50,11 +53,11 @@ string get(string path) {
     unsigned char settings = 0b01010000;
 	// Method respresent the method used (GET = 0.01)
     unsigned char method = 0b00000001;
-
+	// Have to use a fixed ID because random ID added unwanted bytes to the message on the raspberry
 	unsigned char msgId[] = {0b00000000, 0b00000001};
-
+	// URI-Path is option 11 (1011) and occupancy is 9 bytes long (1001)
 	unsigned char uriPath = 0b10111001;
-    // Generate a random message ID
+    // binary representation of string "occupancy"
 	unsigned char pathOccupancy[] = {0b01101111,0b01100011,0b01100011,0b01110101,0b01110000,0b01100001,0b01101110,0b01100011,0b01111001};
 	
 	// Forming a message based on the parameters
@@ -62,12 +65,10 @@ string get(string path) {
 	message.push_back(method);
 	message.push_back(msgId[0]);
 	message.push_back(msgId[1]);
-	// 16+32+128 correspond to the bits we need to set to configure the option URI-path (11)
 	message += uriPath;
 	for(int i = 0; i < 9; i++){
 		message.push_back(pathOccupancy[i]);
 	}
-	cout << message.length() << endl;
 	return message;
 }
 
@@ -80,11 +81,11 @@ string put(char input, string path){
     unsigned char settings = 0b01010000;
 	// Method respresent the method used (PUT = 0.03)
     unsigned char method = 0b00000011;
-	// Generate a random message ID
+	// Have to use a fixed ID because random ID added unwanted bytes to the message on the raspberry
 	unsigned char msgId[] = {0b00000000, 0b00000001};
-
+	// URI-Path is option 11 (1011) and light is 5 bytes long (0101)
 	unsigned char uriPath = 0b10110101;
-    // Generate a random message ID
+	// binary representation of string "light"
 	unsigned char pathLight[] = {0b01101100,0b01101001,0b01100111,0b01101000,0b01110100};
 	// payloadOption contains the parameters for the payload (1 = 0001 and 0 = 0000 for length)
 	unsigned char payloadOption = 0b00010000;
@@ -118,7 +119,7 @@ string getContent(char *buffer, int bufferSize){
 
 // Function used to send requests to send a request to a coap server
 void sendRequest(int sockfd, sockaddr_in servaddr, string message, char *buffer){
-	// Size of the response
+	// Size of the responseoccupancy
 	unsigned int n = 0;
 	// Size of the server address
 	unsigned int len = 0;
@@ -132,9 +133,8 @@ void sendRequest(int sockfd, sockaddr_in servaddr, string message, char *buffer)
 	// Closing the answer at the end
     buffer[n] = '\0';
 
-	// Printing the headers and contents
-    //cout << getHeaders(buffer) << endl;
-	cout << getContent(buffer, n) << endl;
+	// Printing the contents
+	// cout << getContent(buffer, n) << endl;
 }
 
 int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *message)
@@ -163,50 +163,60 @@ int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *m
 	servaddr.sin_port = htons(PORT);
 	servaddr.sin_addr.s_addr = inet_addr(ADDRESS_SENSOR);
 
+	// Getting the MQTT message payload and forming a CoAP put message
 	char* payload = (char*)message->payload;
 	messageCoAP = put(*(payload), TOPIC);
 	sendRequest(sockfd, servaddr, messageCoAP, buffer);
 	
+	// Clear values
     MQTTClient_freeMessage(&message);
     MQTTClient_free(topicName);
     return 1;
 }
 
+// Function called when connection is lost
 void connlost(void *context, char *cause)
 {
     printf("\nConnection lost\n");
     printf("     cause: %s\n", cause);
 }
 
+// Function called when message is delivered (not used here)
 void delivered(void *context, MQTTClient_deliveryToken dt)
 {
     printf("Message with token value %d delivery confirmed\n", dt);
     deliveredtoken = dt;
 }
 
-
+// Threaded function getting the value of occupancy via CoAP and sends it to the MQTT broker
 void * process(void * ptr)
 {
 	//MQTT init used to send occuppancy to broker
-	int rc;
+	int returnCode;
     MQTTClient mqttClient;
-    MQTTClient_connectOptions connectionOptions =     MQTTClient_connectOptions_initializer;
+    MQTTClient_connectOptions connectionOptions = MQTTClient_connectOptions_initializer;
     MQTTClient_message messageMQTT = MQTTClient_message_initializer;
     MQTTClient_deliveryToken deliveryToken;
 
-    MQTTClient_create(&mqttClient, ADDRESS_MQTT_BROKER, CLIENTID, 
-    MQTTCLIENT_PERSISTENCE_NONE, NULL);
-
-	connectionOptions.keepAliveInterval = 20;
+	connectionOptions.keepAliveInterval = 60;
     connectionOptions.cleansession = 1;
-
-    if (MQTTClient_connect(mqttClient, &connectionOptions) != MQTTCLIENT_SUCCESS) {
-        printf("Failed to connect\n");
-        pthread_exit(0);
-    }
 
 	messageMQTT.qos = QOS;
 	messageMQTT.retained = 0;
+
+	if ((returnCode = MQTTClient_create(&mqttClient, ADDRESS_MQTT_BROKER, CLIENTID,
+        MQTTCLIENT_PERSISTENCE_NONE, NULL)) != MQTTCLIENT_SUCCESS)
+    {
+         printf("Failed to create client, return code %d\n", returnCode);
+         exit(EXIT_FAILURE);
+    }
+
+	if ((returnCode = MQTTClient_connect(mqttClient, &connectionOptions)) != MQTTCLIENT_SUCCESS)
+    {
+        printf("Failed to connect, return code %d\n", returnCode);
+		pthread_exit(0);
+        exit(EXIT_FAILURE);
+    }
 
 	//CoAP init used too retreive occupancy from sensor
 	// Socket file descriptor
@@ -234,12 +244,13 @@ void * process(void * ptr)
 
 	//infinite loop polling CoAP occupancy and sending it to the broker
 	while(1){
-		message = get("occupancy");
-		cout << "got occupancy" << endl;
+		message = get();
 		sendRequest(sockfd, servaddr, message, buffer);
+		// Getting the CoAP occuancy and forming a MQTT message
 		const char* payloadMQTT = getContent(buffer, 9).c_str();
 		messageMQTT.payload = (void *)payloadMQTT;
 		messageMQTT.payloadlen = 1;
+
 		MQTTClient_publishMessage(mqttClient, "occupancy", &messageMQTT, &deliveryToken);
 		sleep(5);
 	}
@@ -254,34 +265,38 @@ int main(int argc, char* argv[]) {
 	pthread_detach(thread);
 
     //MQTT init
-	int rc;
+	int returnCode;
     MQTTClient mqttClient;
     MQTTClient_connectOptions connectionOptions =     MQTTClient_connectOptions_initializer;
     MQTTClient_message message = MQTTClient_message_initializer;
     MQTTClient_deliveryToken deliveryToken;
 
-    MQTTClient_create(&mqttClient, ADDRESS_MQTT_BROKER, CLIENTID, 
-    MQTTCLIENT_PERSISTENCE_NONE, NULL);
+	connectionOptions.keepAliveInterval = 60;
+    connectionOptions.cleansession = 1;
 
-	if ((rc = MQTTClient_setCallbacks(mqttClient, NULL, connlost, msgarrvd, delivered)) != MQTTCLIENT_SUCCESS)
+    if ((returnCode = MQTTClient_create(&mqttClient, ADDRESS_MQTT_BROKER, CLIENTID,
+        MQTTCLIENT_PERSISTENCE_NONE, NULL)) != MQTTCLIENT_SUCCESS)
     {
-        printf("Failed to set callbacks, return code %d\n", rc);
-        rc = EXIT_FAILURE;
-        MQTTClient_destroy(&mqttClient);
+         printf("Failed to create client, return code %d\n", returnCode);
+         exit(EXIT_FAILURE);
     }
 
-    connectionOptions.keepAliveInterval = 60;
-    connectionOptions.cleansession = 1;
+	if ((returnCode = MQTTClient_setCallbacks(mqttClient, NULL, connlost, msgarrvd, delivered)) != MQTTCLIENT_SUCCESS)
+    {
+        printf("Failed to set callbacks, return code %d\n", returnCode);
+        returnCode = EXIT_FAILURE;
+        MQTTClient_destroy(&mqttClient);
+    }
 
     if (MQTTClient_connect(mqttClient, &connectionOptions) != MQTTCLIENT_SUCCESS) {
         printf("Failed to connect\n");
         return (-1);
     }
 
-    if ((rc = MQTTClient_subscribe(mqttClient, TOPIC, QOS)) != MQTTCLIENT_SUCCESS)
+    if ((returnCode = MQTTClient_subscribe(mqttClient, TOPIC, QOS)) != MQTTCLIENT_SUCCESS)
     {
-    	printf("Failed to subscribe, return code %d\n", rc);
-    	rc = EXIT_FAILURE;
+    	printf("Failed to subscribe, return code %d\n", returnCode);
+    	returnCode = EXIT_FAILURE;
     }
     else
     {
@@ -290,14 +305,15 @@ int main(int argc, char* argv[]) {
     	{
         	ch = getchar();
     	} while (ch!='Q' && ch != 'q');
-        if ((rc = MQTTClient_unsubscribe(mqttClient, TOPIC)) != MQTTCLIENT_SUCCESS)
+        if ((returnCode = MQTTClient_unsubscribe(mqttClient, TOPIC)) != MQTTCLIENT_SUCCESS)
         {
-        	printf("Failed to unsubscribe, return code %d\n", rc);
-        	rc = EXIT_FAILURE;
+        	printf("Failed to unsubscribe, return code %d\n", returnCode);
+        	returnCode = EXIT_FAILURE;
         }
     }
-    MQTTClient_disconnect(mqttClient, 5000);
-    MQTTClient_destroy(&mqttClient);
+    if ((returnCode = MQTTClient_disconnect(mqttClient, 10000)) != MQTTCLIENT_SUCCESS)
+    	printf("Failed to disconnect, return code %d\n", returnCode);
 
+    MQTTClient_destroy(&mqttClient);
     return (0);
 }

@@ -1,3 +1,12 @@
+/* 
+   Clement LEFEBVRE / Implementing IoT protocols
+   Code created for lab 3: Project
+   This code presents a menu to the user that can choose between: 
+    Printing the occupancy of the sensor (polling every 5s)
+    Turning ON the light on the sensor
+    Turning OFF the light on the sensor
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,6 +16,7 @@
 
 using namespace std;
 
+// Address of the MQTT broker
 #define ADDRESS     "192.168.137.64"
 #define CLIENTID    "MqttFrontEnd"
 #define TOPIC       "occupancy"
@@ -15,7 +25,7 @@ using namespace std;
 
 volatile MQTTClient_deliveryToken deliveredtoken;
 
-
+// Function called when a new message arrives to the subscribed topic
 int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *message)
 {
 	char* payload = (char*)message->payload;
@@ -46,43 +56,46 @@ void delivered(void *context, MQTTClient_deliveryToken dt)
 
 int main(int argc, char* argv[])
 {
+    //MQTT init
     MQTTClient client;
-    MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
+    MQTTClient_connectOptions connectionOptions = MQTTClient_connectOptions_initializer;
     MQTTClient_message pubmsg = MQTTClient_message_initializer;
     MQTTClient_deliveryToken token;
-    int rc;
+    int returnCode;
 
-    if ((rc = MQTTClient_create(&client, ADDRESS, CLIENTID,
+    // Used for choice loop
+    int choice = -1;
+
+    if ((returnCode = MQTTClient_create(&client, ADDRESS, CLIENTID,
         MQTTCLIENT_PERSISTENCE_NONE, NULL)) != MQTTCLIENT_SUCCESS)
     {
-         printf("Failed to create client, return code %d\n", rc);
+         printf("Failed to create client, return code %d\n", returnCode);
          exit(EXIT_FAILURE);
     }
 
-    if ((rc = MQTTClient_setCallbacks(client, NULL, connlost, msgarrvd, delivered)) != MQTTCLIENT_SUCCESS)
+    if ((returnCode = MQTTClient_setCallbacks(client, NULL, connlost, msgarrvd, delivered)) != MQTTCLIENT_SUCCESS)
     {
-        printf("Failed to set callbacks, return code %d\n", rc);
-        rc = EXIT_FAILURE;
+        printf("Failed to set callbacks, return code %d\n", returnCode);
+        returnCode = EXIT_FAILURE;
         MQTTClient_destroy(&client);
     }
 
-    conn_opts.keepAliveInterval = 60;
-    conn_opts.cleansession = 1;
+    connectionOptions.keepAliveInterval = 60;
+    connectionOptions.cleansession = 1;
 
-    if ((rc = MQTTClient_connect(client, &conn_opts)) != MQTTCLIENT_SUCCESS)
+    if ((returnCode = MQTTClient_connect(client, &connectionOptions)) != MQTTCLIENT_SUCCESS)
     {
-        printf("Failed to connect, return code %d\n", rc);
+        printf("Failed to connect, return code %d\n", returnCode);
         exit(EXIT_FAILURE);
     }
     
-    int choice = -1;
-
     while(choice != 0){
         cout << endl;
 		cout << "  1. Show live occupancy" << endl;
 		cout << "  2. Turn on" << endl;
         cout << "  3. Turn off" << endl;
 		cout << "  0. Quit" << endl;
+        cout << "Make your choice: " << endl;
         cin >> choice;
         system("clear");
 		switch (choice)
@@ -91,54 +104,62 @@ int main(int argc, char* argv[])
 			// Quit the app
 			break;
 		case 1:
+            // Show live occupancy
             cout << "press q to quit" << endl;
-            if ((rc = MQTTClient_subscribe(client, TOPIC, QOS)) != MQTTCLIENT_SUCCESS)
+            if ((returnCode = MQTTClient_subscribe(client, TOPIC, QOS)) != MQTTCLIENT_SUCCESS)
             {
-                printf("Failed to subscribe, return code %d\n", rc);
-                rc = EXIT_FAILURE;
+                printf("Failed to subscribe, return code %d\n", returnCode);
+                returnCode = EXIT_FAILURE;
             }
-            else
-            {
+            else {
                 int ch;
-                do
-                {
+                do {
                     ch = getchar();
                 } while (ch!='Q' && ch != 'q');
-                if ((rc = MQTTClient_unsubscribe(client, TOPIC)) != MQTTCLIENT_SUCCESS)
-                {
-                    printf("Failed to unsubscribe, return code %d\n", rc);
-                    rc = EXIT_FAILURE;
+
+                if ((returnCode = MQTTClient_unsubscribe(client, TOPIC)) != MQTTCLIENT_SUCCESS) {
+                    printf("Failed to unsubscribe, return code %d\n", returnCode);
+                    returnCode = EXIT_FAILURE;
                 }
             }
 			break;
 		case 2:
+            // Turn ON the light
             pubmsg.payload = (void*)"0";
             pubmsg.payloadlen = 1;
             pubmsg.qos = QOS;
             pubmsg.retained = 0;
-            if ((rc = MQTTClient_publishMessage(client, "light", &pubmsg, &token)) != MQTTCLIENT_SUCCESS)
+
+            if ((returnCode = MQTTClient_publishMessage(client, "light", &pubmsg, &token)) != MQTTCLIENT_SUCCESS)
             {
-                printf("Failed to publish message, return code %d\n", rc);
+                printf("Failed to publish message, return code %d\n", returnCode);
                 exit(EXIT_FAILURE);
             }
-            rc = MQTTClient_waitForCompletion(client, token, TIMEOUT);
+
+            returnCode = MQTTClient_waitForCompletion(client, token, TIMEOUT);
             break;
         case 3:
+            // Turn OFF the light
             pubmsg.payload = (void*)"1";
             pubmsg.payloadlen = 1;
             pubmsg.qos = QOS;
             pubmsg.retained = 0;
-            if ((rc = MQTTClient_publishMessage(client, "light", &pubmsg, &token)) != MQTTCLIENT_SUCCESS)
+
+            if ((returnCode = MQTTClient_publishMessage(client, "light", &pubmsg, &token)) != MQTTCLIENT_SUCCESS)
             {
-                printf("Failed to publish message, return code %d\n", rc);
+                printf("Failed to publish message, return code %d\n", returnCode);
                 exit(EXIT_FAILURE);
             }
-            rc = MQTTClient_waitForCompletion(client, token, TIMEOUT);
+
+            returnCode = MQTTClient_waitForCompletion(client, token, TIMEOUT);
             break;
         }
     }
-    if ((rc = MQTTClient_disconnect(client, 10000)) != MQTTCLIENT_SUCCESS)
-    	printf("Failed to disconnect, return code %d\n", rc);
+
+    if ((returnCode = MQTTClient_disconnect(client, 10000)) != MQTTCLIENT_SUCCESS)
+    	printf("Failed to disconnect, return code %d\n", returnCode);
+
     MQTTClient_destroy(&client);
-    return rc;
+    
+    return returnCode;
 }
