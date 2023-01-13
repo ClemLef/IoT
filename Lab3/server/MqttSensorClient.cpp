@@ -76,8 +76,6 @@ string get(string path) {
 string put(char input, string path){
 	// Declaring parameters
 	string message = "";
-	// Get the path length
-	int size = path.length();
 
 	// Declaring parameters as bits
 	// Settings represent Version (01), Type (01) and Token length (0000)
@@ -85,7 +83,7 @@ string put(char input, string path){
 	// Method respresent the method used (PUT = 0.03)
     unsigned char method = 0b00000011;
 	// Generate a random message ID
-	string msgId = randomMsgId();
+	unsigned char msgId[] = {0b00000000, 0b00000001};
 
 	unsigned char uriPath = 0b10110101;
     // Generate a random message ID
@@ -98,7 +96,8 @@ string put(char input, string path){
 	// Forming a message based on the parameters
 	message.push_back(settings);
 	message.push_back(method);
-	message += msgId;
+	message.push_back(msgId[0]);
+	message.push_back(msgId[1]);
 	message.push_back(uriPath);
 	for(int i = 0; i < 5; i++){
 		message.push_back(pathLight[i]);
