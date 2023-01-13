@@ -55,6 +55,7 @@ string get(string path, string ip) {
     unsigned char settings = 0b01010000;
 	// Method respresent the method used (GET = 0.01)
     unsigned char method = 0b00000001;
+	unsigned char uriPath = 0b10110101;
     // Generate a random message ID
 	string msgId = randomMsgId();
 	// Forming a message based on the parameters
@@ -62,7 +63,7 @@ string get(string path, string ip) {
 	message.push_back(method);
 	message += msgId;
 	// 16+32+128 correspond to the bits we need to set to configure the option URI-path (11)
-	message.push_back(0b10110101);
+	message.push_back(uriPath);
 	message += path;
 	return message;
 }
