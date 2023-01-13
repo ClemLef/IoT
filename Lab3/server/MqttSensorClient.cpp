@@ -136,7 +136,7 @@ void sendRequest(int sockfd, sockaddr_in servaddr, string message, char *buffer)
 
 	// Printing the headers and contents
     //cout << getHeaders(buffer) << endl;
-	//cout << getContent(buffer, n) << endl;
+	cout << getContent(buffer, n) << endl;
 }
 
 int msgarrvd(void *context, char *topicName, int topicLen, MQTTClient_message *message)
@@ -237,6 +237,7 @@ void * process(void * ptr)
 	//infinite loop polling CoAP occupancy and sending it to the broker
 	while(1){
 		message = get("occupancy");
+		cout << "got occupancy" << endl;
 		sendRequest(sockfd, servaddr, message, buffer);
 		const char* payloadMQTT = getContent(buffer, 9).c_str();
 		messageMQTT.payload = (void *)payloadMQTT;
