@@ -65,6 +65,7 @@ string get(string path, string ip) {
 	// 16+32+128 correspond to the bits we need to set to configure the option URI-path (11)
 	message += uriPath;
 	message += path;
+	cout << message.length() << endl;
 	return message;
 }
 
