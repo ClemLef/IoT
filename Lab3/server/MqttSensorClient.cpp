@@ -45,8 +45,6 @@ string randomMsgId(){
 string get(string path) {
 	// Declaring parameters
 	string message = "";
-	// Get the path length
-	int size = 5;
 	// Declaring parameters as bits
 	// Settings represent Version (01), Type (01) and Token length (0000)
     unsigned char settings = 0b01010000;
@@ -66,7 +64,7 @@ string get(string path) {
 	message.push_back(msgId[1]);
 	// 16+32+128 correspond to the bits we need to set to configure the option URI-path (11)
 	message += uriPath;
-	for(int i = 0; i < 8; i++){
+	for(int i = 0; i < 9; i++){
 		message.push_back(pathOccupancy[i]);
 	}
 	cout << message.length() << endl;
