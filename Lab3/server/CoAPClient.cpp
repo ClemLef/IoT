@@ -161,13 +161,13 @@ void sendRequest(int sockfd, sockaddr_in servaddr, string message, char *buffer)
 	unsigned int len = 0;
 	// Sending the message to the test server
 	cout << "sending" << endl;
-	//sendto(sockfd, message.c_str(), message.length(), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
-	cout << send(sockfd, message.c_str(), message.length(), MSG_CONFIRM);
-
+	cout << sendto(sockfd, message.c_str(), message.length(), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
+	cout << endl;
 	// Get the response from the server
     n = recvfrom(sockfd, buffer, MAXLINE + 1,
             MSG_WAITALL, (struct sockaddr *) &servaddr,
             &len);
+	cout << n << endl;
 	// Closing the answer at the end
     buffer[n] = '\0';
 
@@ -200,7 +200,7 @@ int main() {
 	memset(&servaddr, 0, sizeof(servaddr));
 
 	//cout << "Enter the ip address of the sensor : ";
-	ip = "192.168.137.236";
+	ip = "192.168.137.102";
 		
 	// CoAP server network info
 	servaddr.sin_family = AF_INET;
@@ -230,7 +230,7 @@ int main() {
 			// Ask for a path and send get request
 			cout << "Enter the path to display : ";
 			cin >> path;
-			message = get(path, ip);
+			//message = get(path, ip);
 			sendRequest(sockfd, servaddr, message, buffer);
 			break;
 		case 2:
