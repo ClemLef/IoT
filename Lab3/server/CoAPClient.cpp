@@ -160,6 +160,7 @@ void sendRequest(int sockfd, sockaddr_in servaddr, string message, char *buffer)
 	// Size of the server address
 	unsigned int len = 0;
 	// Sending the message to the test server
+	cout << "sending" << endl;
 	//sendto(sockfd, message.c_str(), message.length(), MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
 	cout << send(sockfd, message.c_str(), message.length(), MSG_CONFIRM);
 
