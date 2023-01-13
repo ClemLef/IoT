@@ -70,7 +70,7 @@ string get(string path) {
 	// 16+32+128 correspond to the bits we need to set to configure the option URI-path (11)
 	message += uriPath;
 	for(int i = 0; i < 5; i++){
-		message.push_back(path2[i]);
+		message.push_back(pathLight[i]);
 	}
 	cout << message.length() << endl;
 	return message;
@@ -258,7 +258,7 @@ int main() {
 			cout << "Status : ";
 			sendRequest(sockfd, servaddr, message, buffer);
 			// Display the contents of the path using a get
-			message = get(path, ip);
+			message = get(path);
 			cout << "Contents : ";
 			sendRequest(sockfd, servaddr, message, buffer);
 			break;
@@ -273,7 +273,7 @@ int main() {
 			cout << "Status : ";
 			sendRequest(sockfd, servaddr, message, buffer);
 			// Display the contents of the path using a get
-			message = get(path, ip);
+			message = get(path);
 			cout << "Contents : ";
 			sendRequest(sockfd, servaddr, message, buffer);
 			break;
