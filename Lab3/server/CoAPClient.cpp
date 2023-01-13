@@ -45,7 +45,7 @@ string randomMsgId(){
 	return randomId;
 }
 
-string get(string path, string ip) {
+string get(string path) {
 	// Declaring parameters
 	string message = "";
 	// Get the path length
@@ -60,7 +60,7 @@ string get(string path, string ip) {
 
 	unsigned char uriPath = 0b10110101;
     // Generate a random message ID
-	unsigned char path2[] = {0b01101100,0b01101001,0b01100111,0b01101000,0b01110100};
+	unsigned char pathLight[] = {0b01101100,0b01101001,0b01100111,0b01101000,0b01110100};
 	
 	// Forming a message based on the parameters
 	message.push_back(settings);
@@ -145,6 +145,10 @@ string put(string input, string path){
     unsigned char method = 0b00000011;
 	// Generate a random message ID
 	string msgId = randomMsgId();
+
+	unsigned char uriPath = 0b10110101;
+    // Generate a random message ID
+	unsigned char pathLight[] = {0b01101100,0b01101001,0b01100111,0b01101000,0b01110100};
 	// payloadOption contains the parameters for the payload (1 = 0001 and 0 = 0000 for length)
 	unsigned char payloadOption = 0b00010000;
 	// separate header and payload with 11111111
@@ -154,8 +158,10 @@ string put(string input, string path){
 	message.push_back(settings);
 	message.push_back(method);
 	message += msgId;
-	message.push_back(16 + 32 + 128 + size);
-	message += path;
+	message.push_back(uriPath);
+	for(int i = 0; i < 5; i++){
+		message.push_back(pathLight[i]);
+	}
 	message.push_back(payloadOption);
 	message.push_back(separator);
 	message += input;
@@ -238,8 +244,7 @@ int main() {
 			// Ask for a path and send get request
 			cout << "Enter the path to display : ";
 			//cin >> path;
-			path = "light";
-			message = get(path, ip);
+			message = get(path);
 			sendRequest(sockfd, servaddr, message, buffer);
 			break;
 		case 2:
