@@ -169,13 +169,12 @@ void sendRequest(int sockfd, sockaddr_in servaddr, string message, char *buffer)
     n = recvfrom(sockfd, buffer, MAXLINE + 1,
             MSG_WAITALL, (struct sockaddr *) &servaddr,
             &len);
-	cout << n << endl;
 	// Closing the answer at the end
     buffer[n] = '\0';
 
 	// Printing the headers and contents
     //cout << getHeaders(buffer) << endl;
-	cout << getContent(buffer, n) << endl;
+	//cout << getContent(buffer, n) << endl;
 }
 
 // Main function of the program
