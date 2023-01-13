@@ -49,7 +49,7 @@ string get(string path, string ip) {
 	// Declaring parameters
 	string message = "";
 	// Get the path length
-	int size = path.length();
+	int size = 6;
 	// Declaring parameters as bits
 	// Settings represent Version (01), Type (01) and Token length (0000)
     unsigned char settings = 0b01010000;
