@@ -263,7 +263,7 @@ int main() {
 	// CoAP server network info (134.102.218.18 is coap.me IP)
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_port = htons(PORT);
-	servaddr.sin_addr.s_addr =  inet_addr("134.102.218.18");
+	servaddr.sin_addr.s_addr =  inet_addr("192.168.137.184");
 	
 	// Loop asking the user an action to realise
 	while(choice != 0){

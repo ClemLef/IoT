@@ -22,8 +22,8 @@
 
 using namespace std;
 
-const char *ADDRESS_MQTT_BROKER = "tcp://192.168.137.64";
-const char *ADDRESS_SENSOR = "192.168.137.102";
+const char *ADDRESS_MQTT_BROKER = "tcp://192.168.137.107";
+const char *ADDRESS_SENSOR = "192.168.137.184";
 
 #define CLIENTID    "ESP8266"
 #define TOPIC       "light"

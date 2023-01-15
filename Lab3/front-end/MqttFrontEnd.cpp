@@ -17,7 +17,7 @@
 using namespace std;
 
 // Address of the MQTT broker
-#define ADDRESS     "192.168.137.64"
+#define ADDRESS     "192.168.137.107"
 #define CLIENTID    "MqttFrontEnd"
 #define TOPIC       "occupancy"
 #define QOS         0
