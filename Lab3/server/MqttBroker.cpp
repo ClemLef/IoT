@@ -186,7 +186,10 @@ void sendPublish(string message, string topic, list<int> sockList, int socket){
 		// sending to all sockets in the subscribed list
 		for (auto const &i: sockList) {
 			if(i != socket){
-				send(i, response.c_str(), response.length(), 0);
+				if(send(i, response.c_str(), response.length(), MSG_NOSIGNAL) == -1){
+					// If the message didn't get through, socket probably closed, remove it from map
+					removeFromMap(topic, i);
+				}
 			}
 		}
 	}
